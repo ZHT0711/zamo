@@ -1,0 +1,694 @@
+# Rime schema
+# encoding: utf-8
+# 方案说明
+schema:
+  schema_id: wanxiang_pro
+  name: 万象拼音PRO
+  version: "LTS"
+  author:
+  - amzxyz
+  description: |
+    请勾选【万象拼音PRO】以启用，万象拼音 支持常见双拼方案和全拼输入，辅助码同时支持 全拼拼音、墨奇码、鹤形、自然码、虎码首末、五笔前2、汉心码、首右，拥有超越大厂的输入体验！带声调的词库，支持语法模型，全拼、简拼、整句、声调辅助筛选
+    【文本框输入：/pinyin全拼，/zrm自然码,/flypy小鹤，/mspy,/sogou,/pyjj等，详见README.md】
+  dependencies:
+  - wanxiang_mixedcode #中英文混合词汇
+  - wanxiang_reverse #部件拆字，反查及辅码
+  - wanxiang_english #中英文混合词汇
+  - wanxiang_chaifen #辅助码拆分注释、翻译注释、行政区划匹配、车牌、等等注释类显示滤镜，Lua专用：super_comment
+  - moran_fixed
+  - moran_charset # 魔然过滤器
+
+# 开关
+# reset: 默认状态。注释掉后，切换窗口时不会重置到默认状态。
+# states: 方案选单显示的名称。可以注释掉，仍可以通过快捷键切换。
+# abbrev: 默认的缩写取 states 的第一个字符，abbrev 可自定义一个字符
+switches:
+- name: ascii_mode # 中英输入状态
+  states: [ 中文, 英文 ]
+- name: ascii_punct # 中英标点
+  states: [ 中标, 英标 ]
+- name: full_shape #全角、半角字符输出
+  states: [ 半角, 全角 ]
+- name: emoji #候选出现emoji滤镜，会显示在相应的候选后面，万象侧重于tips提示，避免候选被占用，因此默认为reset: 0，归属opencc emoji滤镜
+  states: [ 🙃, 😄 ]
+- name: chinese_english #候选进入翻译模式滤镜，会显示在相应的候选后面，万象侧重于tips提示，避免候选被占用，快捷键配套ctrl+e,归属opencc 翻译滤镜
+  states: [ 翻译关, 翻译开 ]
+- name: chaifen_switch #开启后在候选的注释里面实时显示辅助码的拆分提醒优先级高于普通辅助提醒，不开启则采用系统配置，快捷键配套ctrl+c,影响的是comment_format，归属：super_comment.lua
+  states: [ 拆分关, 拆分开 ]
+- name: extended_charset
+  states: [ 通用, 增廣 ]
+- name: super_tips #开启后在输入编码后面的提示区显示实时的提示数据，受tips数据库影响，表情、翻译、车牌、符号等对应关系数据，并可实现句号上屏，不开启则默认，影响的是segment.prompt参数，归属：super_tips.lua
+  states: [ 提示关, 提示开 ]
+  reset: 0
+- name: prediction
+  states: [ 预测关, 预测开 ] # 这个名称能用于插件也能用于万象的lua实现，用来开启关闭预测功能
+- options: [ raw_input, tone_display, full_pinyin, superscript_fuzhu ]
+  states: [ 原编码, 有声调, 无声调, 角标辅 ]
+#    reset: 2     #对于开关组从0开始数，第几个就reset几可设为默认
+- options: [ comment_off, fuzhu_hint, tone_hint ] #开启后在候选的注释里面实时显示辅助码或者全拼声调，不开启则采用系统配置，影响的是comment_format，快捷键配套ctrl+a,归属：super_comment.lua
+  states: [ 注释关, 辅助开, 读音开 ]
+- name: traditionalization
+  states: [ 简体, 繁體 ]
+- options: [ std_opencc, std_tw, std_hk ]
+  reset: 0
+  states: [ 通, 臺, 港 ]
+- name: inflexible
+  states: [ 動詞, 固詞 ]
+- name: char_priority #多体现在编码重合但候选有单字或者多字的情况`引导的辅码查词时是否单字优先，全拼常见，类似于特定编码情况下、反查状态下的调序能力。归属：super_lookup.lua
+  states: [ 词组先, 单字先 ]
+
+# 输入引擎
+engine:
+  processors:
+  - lua_processor@*wanxiang.super_tips #超级提示模块：表情、简码、翻译、化学式、等等靠你
+  - lua_processor@*moran.moran_pin*pin_processor # PIN
+  - lua_processor@*wanxiang.user_predict*P #靠自己养的专属预测联想处理器，不再依赖前端插件以及固定数据
+  - lua_processor@*wanxiang.super_processor #KP小键盘、字母选词、符号快打、超强分词、重复限制、退格限制、声调回退、以词定字
+  - lua_processor@*moran.moran_processor
+  - lua_processor@*wanxiang.force_upper_aux #自动将N-1首选数量的汉字大写辅助码施加到音节后面起到固定语句分词的作用
+  - lua_processor@*mylua.partial_commit #通过ctrl+1~0局部提交10个字以内的句子的前几个字（一般为正确的前几个）使用时要遵循合理的分词结构能促进后续编码打出正确的词汇
+  - lua_processor@*mylua.reverse_comment
+  - ascii_composer #处理英文模式及中英文切换
+  - recognizer #与 matcher 搭配，处理符合特定规则的输入码，如网址、反查等 tags
+  - key_binder #在特定条件下将按键绑定到其他按键，如重定义逗号、句号为候选翻页、开关快捷键等
+  - lua_processor@*wanxiang.key_binder #绑定按键扩展能力，支持正则扩展将按键生效情景更加细化
+  - speller #拼写处理器，接受字符按键，编辑输入
+  - punctuator #符号处理器，将单个字符按键直接映射为标点符号或文字
+  - selector #选字处理器，处理数字选字键〔可以换成别的哦〕、上、下候选定位、换页
+  - navigator #处理输入栏内的光标移动
+  - express_editor #编辑器，处理空格、回车上屏、回退键
+  segmentors:
+  - ascii_segmentor #标识英文段落〔譬如在英文模式下〕字母直接上屛
+  - matcher #配合 recognizer 标识符合特定规则的段落，如网址、反查等，加上特定 tag
+  - lua_segmentor@*mylua.paired_punct
+  - abc_segmentor #标识常规的文字段落，加上 abc 这个 tag
+  - affix_segmentor@wanxiang_reverse #反查 tag
+  - affix_segmentor@add_user_dict #自造词加词 t
+  - punct_segmentor #标识符号段落〔键入标点符号用〕加上 punct 这个 tag
+  - fallback_segmentor #标识其他未标识段落，必须放在最后帮助tag模式切换后回退重新处理
+  translators:
+  - lua_translator@*wanxiang.user_predict*T #靠自己养的专属预测联想处理器，不再依赖前端插件以及固定数据
+  - punct_translator #配合 punct_segmentor 转换标点符号
+  - lua_translator@*mylua.pseudo_moran@with_reorder
+  - lua_translator@*wanxiang.shijian #农历、日期、节气、节日、时间、周、问候模板等等，触发清单看下文
+  - lua_translator@*wanxiang.unicode #通过输入大写U引导，并输入Unicode编码获得汉字输出hc〔简码：荟萃〕
+  - lua_translator@*wanxiang.number_translator #数字、金额大写，通过输入大写R1234获得候选输出
+  - lua_translator@*wanxiang.super_calculator #超级计算器，Lua内查看高级用法
+  - table_translator@custom_phrase #自定义短语 custom_phrase.txt，用于置顶自定义编码候选词
+  - table_translator@wanxiang_english #英文词汇表导入，限流，格式化
+  - table_translator@wanxiang_mixedcode #混合编码词汇表导入
+  - lua_translator@*moran.moran_pin*panacea_translator # PIN
+  - reverse_lookup_translator@wanxiang_reverse #挂接部件组字和笔画反查
+  - script_translator@add_user_dict #自造词之制造词汇入口
+  filters:
+  - lua_filter@*wanxiang.user_predict*F #用于输入编码后的上下文调频
+  - lua_filter@*moran.moran_charset_filter # 魔然字符集过滤
+  - lua_filter@*moran.moran_pin*pin_filter # PIN
+  - lua_filter@*moran.moran_reorder_filter # 魔然滤镜dd
+  - lua_filter@*moran.moran_ijrq_filter # 魔然出简让全
+  - lua_filter@*super_comment_preedit #放其他需要注释处理器后面,会有清空注释的操作,超级注释模块，支持错词提示、辅助码显示，部件组字读音注释，支持个性化配置和关闭相应的功能，详情搜索super_comment进行详细配置
+  - lua_filter@*moran.moran_hint_filter # 魔然简词提示
+  - lua_filter@*mylua.add_words # 英文造词
+  - simplifier@emoji # emoji表情切换
+  - simplifier@traditionalize # 简繁切换
+  - simplifier@std_hk # 香港用字标准
+  - simplifier@std_tw # 台湾用字标准
+  - simplifier@chinese_english # 中英翻译切换
+  - lua_filter@*wanxiang.super_filter
+  - lua_filter@*aux_code
+  - lua_filter@*wanxiang.super_lookup #字词输入中反查辅助筛选
+  - uniquifier #去重
+
+grammar:
+  language: wanxiang-lts-zh-hans
+  collocation_max_length: 6
+  collocation_min_length: 2
+  collocation_penalty: -14
+  non_collocation_penalty: -6
+  weak_collocation_penalty: -100
+  rear_penalty: -18
+
+super_comment:
+  # 超级注释模块，子项配置 true 开启，false 关闭
+  candidate_length: 2 # 候选词辅助码提醒的生效长度，0为关闭  但同时清空其它，应当使用上面开关来处理
+  corrector_type: "〔comment〕" # 换一种显示类型，比如"({comment})" 
+  fuzhu_type: fuzhu # 分包这是一个固定搭配，声调可以使用开关控制
+
+#成语简码前置位置，只能设置在第一页，大于当前页数量则默认在最后一个，0代表关闭前置
+idiom_preposition: 2
+
+# Tips 配置项
+tips:
+  # 禁用的 tips 类型，初始化 tips 数据库的时候会直接忽略相关规则，修改部署后生效
+  # 可选项为：偏旁，符号，化学式，时间，符号，组字，翻译，表情，货币，车牌
+  disabled_types: []
+
+# 给 kp_number_processor 用的小键盘模式，能自动读取recognizer下面正则与之功能对齐
+kp_number_mode: auto
+
+force_upper_aux:
+  hotkey: "period" #用来固定候选的快捷键，原理是用双大写字母定字,能用组合键能用符号Tab等，按一下固定当前可见候选，按两下固定N-1个字状态下记录的字
+  symbol: "›" #用来替代双大写字母辅助的preedit视觉拉长的问题你
+
+paired_punct:
+  pattern: '^([asduk])\'
+  defer:
+  - "，"
+  - "、"
+  - "|"
+  dict:
+    u: [ '《', '》' ]
+    k: [ '（', '）' ]
+    s: [ '「', '」' ]
+    d: [ '『', '』' ]
+    a: [ '"', '"' ]
+
+#shijian:仅仅作为提示使用，编码已经写死，引导键可以在key_binder下修前缀
+#时间：osj 或者 /sj
+#日期：orq 或者 /rq
+#农历：onl 或者 /nl
+#星期：oxq 或者 /xq
+#今年第几周：oww 或者 /ww
+#节气：ojq 或者 /jq
+#日期+时间：odt 或者 /dt
+#时间戳：ott 或者 /tt
+#大写N日期：N20250315 或者N0312不带年
+#节日：ojr 或者 /jr
+#问候模板：/day 或者 oday
+# 通用日期时间格式化函数（供 /rq、/sj、/dt、N0101、N20150101 场景复用）
+# 支持转义：
+#   \X       —— 转义单个字符 X，按字面量输出（如 \Y \m \H 等）
+#   [[...]]  —— 区块整体按字面量输出
+#
+# 约定占位符：
+# 【日期】
+#   Y  四位年份           0000-9999  例：2025
+#   y  两位年份           00-99      例：25
+#   m  月（前导零）        01-12      例：02
+#   n  月（不带前导零）     1-12       例：2
+#   d  日（前导零）        01-31      例：09
+#   j  日（不带前导零）     1-31       例：9
+#
+# 【时间】
+#   H  24小时（前导零）   00-23      例：08
+#   G  24小时（不带零）   0-23       例：8
+#   I  12小时（前导零）   01-12      例：08
+#   l  12小时（不带零）   1-12       例：8   （注意是小写 L）
+#   M  分钟（前导零）     00-59      例：05
+#   S  秒（前导零）       00-59      例：09
+#   p  am/pm（小写）     am / pm
+#   P  AM/PM（大写）     AM / PM
+# 【时区】
+#   O  带冒号格式        +08:00、-04:30、+05:45
+#   o  不带冒号格式      +0800、-0430、+0545
+#   A  中文时段    凌晨 / 上午 / 中午 / 下午 / 晚上
+date_formats:
+- "Y年m月d日"
+- "Y-m-d"
+- "Y/m/d"
+- "Y.m.d"
+- "Ymd"
+- "Y年n月j日"
+- "y年n月j日"
+- "n月j日"
+time_formats:
+- "H:M"
+- "H点M分"
+- "H:M:S"
+- "H时M分S秒"
+- "AI:M"
+- "I:M P"
+datetime_formats:
+- "Y-m-d H:M:S"
+- "Y-m-dTH:M:S O"
+- "YmdHMS"
+- "Y年m月d日 H点M分"
+- "y/m/d I:M p"
+
+#常规状态下数字转换成相应的字符，由超级preedit接管
+tone_preedit:
+  "7": "¹"
+  "8": "²"
+  "9": "³"
+  "0": "⁴"
+
+# a/、单字母组合，触发预设编码自动上屏快符，支持将值设为"repeat" 以支持对应按键重复上屏功能，custom>schema>lua最终合并键值
+# 现在就支持26字母快符，结合成对符号输入，这边的压力小一些
+quick_symbol_text:
+  trigger: "^([a-z])/$"
+  symkey:
+    q: "repeat"
+    w: "？"
+    e: "（"
+    r: "）"
+    t: "~"
+    y: "·"
+    u: "『"
+    i: "』"
+    o: "〖"
+    p: "〗"
+    a: "！"
+    s: "……"
+    d: "、"
+    f: "“"
+    g: "”"
+    h: "‘"
+    j: "’"
+    k: "【"
+    l: "】"
+    z: "。”"
+    c: "！”"
+    v: "——"
+    b: "%"
+    n: "《"
+    m: "》"
+
+# Lua 配置：计算器触发关键字
+calculator:
+  trigger: "V"
+
+# 主翻译器，拼音
+translator:
+  dictionary: wanxiang_pro # 挂载词库 wanxiang.dict.yaml
+  #  packs: user                  #导入根目录下名称为user.dict.yaml的自定义固定词典
+  prism: zaran # 多方案共用一个词库时，为避免冲突，需要用 prism 指定一个名字。
+  enable_completion: true # 启用候选词补全
+  #  user_dict: zrm.userdb  # 用户词典的文件名称
+  #  db_class: tabledb  #开启后就不会产生zrm.userdb这样的文件夹，会直接输出文本zrm.txt同时无法使用同步能力
+  enable_user_dict: false # 是否开启自动调频
+  contextual_suggestions: false #模型用来开启词组权重预测，效果一般关闭
+  max_homophones: 5
+  max_homographs: 7
+  core_word_length: 4 # >0 启用，按段学词 + 相邻段拼接
+  max_word_length: 7 # >0 启用，过长短语不记整词，只加元素权重
+  #  disable_user_dict_for_patterns:
+  #    - "^[a-z]{1,6}"    #基本的6码3字不调频
+  enable_correction: false #是否开启自动纠错
+  initial_quality: 5 # 初始质量拼音的权重应该比英文大
+  spelling_hints: 50 # 将注释以词典字符串形式完全暴露，通过super_comment.lua完全接管，灵活配置。
+  always_show_comments: true # Rime 默认在 preedit 等于 comment 时取消显示 comment，这里强制一直显示，供super_comment_preedit.lua做判断用。
+  comment_format: { comment } #将注释以词典字符串形式完全暴露，通过super_comment.lua完全接管，灵活配置。
+
+# 动词翻译器
+frequency:
+  dictionary: wanxiang_pro # 挂载词库
+  prism: zaran # 多方案共用一个词库时，为避免冲突，需要用 prism 指定一个名字。
+  initial_quality: 5 # 初始权重
+  spelling_hints: 20 # 将注释以词典字符串形式完全暴露
+  contextual_suggestions: false # 语言模型预测词组权重
+  core_word_length: 4 # >0 启用，按段学词 + 相邻段拼接
+  max_word_length: 7 # >0 启用，过长短语不记整词，只加元素权重
+  enable_completion: true # 补全提示
+  max_homographs: 5 # 最大同形簇长度
+  max_homophones: 10 # 最大同音簇长度
+  max_sentences: 2
+
+fixed:
+  dictionary: moran_fixed_simp
+  enable_charset_filter: false
+  enable_sentence: false
+  enable_completion: false
+  enable_user_dict: false
+  enable_encoder: true
+  encode_commit_history: true # 是否開啓自動造詞
+  initial_quality: 1000
+
+# 自定义短语
+custom_phrase:
+  dictionary: ""
+  user_dict: custom_phrase # 需要手动创建 custom_phrase.txt 文件
+  db_class: stabledb
+  enable_completion: false # 补全提示
+  enable_sentence: false # 禁止造句
+  initial_quality: 99999 # custom_phrase 的权重应该比 pinyin 和 wanxiang_en 大
+
+pinyinhint:
+  option_name: pinyinhint
+  opencc_config: moran_pinyinhint.json
+  tips: char
+  show_in_comment: true
+
+# 中文、英文、数字、符号等混合词汇
+wanxiang_english:
+  dictionary: wanxiang_english
+  user_dict: en
+  enable_completion: true
+  enable_sentence: false
+  initial_quality: 2.1
+  comment_format:
+  #这里很重要如果残留带声调字母，剩余编码提示计算出错引发程序崩溃
+  - xform/^~.+$//
+  #英文自动加空格，除关闭外共有3种模式可供选择
+  #off: 关闭; before: 总是前加; after: 总是后加; 
+  #smart: 智能模式连续输入英文时第二个单词前开始加空格，非输入状态的回车与空格都能打断加空格状态
+  #支持设置延时销毁加空格状态，单位秒,0不超时，大于0为超时时间，极大的保证了连续输入的体验。
+  english_spacing: smart
+  spacing_timeout: 5
+
+wanxiang_mixedcode:
+  dictionary: wanxiang_mixedcode
+  db_class: stabledb
+  enable_completion: true
+  enable_sentence: false
+  initial_quality: 2
+  comment_format:
+  #这里很重要如果残留带声调字母，剩余编码提示计算出错引发程序崩溃
+  - xform/^~.+$//
+
+# 部件拆字反查
+wanxiang_reverse:
+  tag: wanxiang_reverse
+  dictionary: wanxiang_reverse
+  prefix: "`" # 反查前缀（反查时前缀会消失），与 recognizer/patterns/wanxiang_reverse 匹配
+  tips: "〔反查：拆分|笔画〕"
+
+input_stats:
+  db_name: "stats" # 自定义统计数据库路径
+  triggers:
+    clear: "/qctj" # 清除数据（推荐长一点防误触）
+    today: "/rtj" # 查今日（日统计）
+    week: "/ztj" # 查本周（周统计）
+    month: "/ytj" # 查本月（月统计）
+    year: "/ntj" # 查本年（年统计）
+    total: "/tj" # 查生涯（总统计）
+    history: "/htj" # 时光机：查历史。用法示例输入：/htj20231015，从年月日依次递进，以t间隔查区间/htj20231015t20240102
+
+super_processor:
+  enable_backspace_limit: true # 开启/关闭退格限制
+  enable_seg_loop: true # 开启/关闭分词符（'）循环
+  enable_tone_fallback: true # 启用声调回退
+  enable_predict_space: false # 启用联想空格打断，直接上屏空格并清空联想，对齐大厂，如果用原生librime-predict这个还有用留着
+  kp_number_mode: auto # 小键盘模式 (auto / compose / select)
+  limit_repeated: "8,40" #格式："最大重复声母数,最大候选字数"
+  select_character: "[,]" # 开启以词定字，自动拆解第一位上屏首字，第二位上屏尾字
+  # 下面这些写法都支持：
+  # select_character: "[,]"                      # [ 上屏首字，] 上屏尾字（推荐）
+  # select_character: "bracketleft, bracketright"  # [ 上屏首字，] 上屏尾字（英文全拼）
+
+user_predict:
+  db_name: predict # 数据库名称（默认 predict，将生成 predict.userdb 文件夹）
+  mobile_predict_style: post # 移动端联想模式："post"（上屏后弹出预测候选）| "reorder"（输入时调频）| "off"（关闭）
+  # 上面的开关是总开关，开启后pc端自动为上下文调频模式，不再有弹出模式。
+  enable_fallback_reorder: false # 同码回删再输首次交换
+  max_candidates: 10 # 屏幕最多显示的联想词数量
+  max_predictions: 3 # 连续触发预测的最高次数限制
+  expiry_days: 90 # 绝对寿命（天）：不命中则物理销毁
+  activation_days: 7 # 激活期限（天）：冷冻期内输入第2次转正
+  max_memory_branches: 15 # 分支上限：单前缀最多保留15个后续预测
+  decay_rate: 0.85 # 衰减率：单日时间权重打 85 折
+  context_timeout: 5000 # 上文超时时间毫秒
+  custom_classifiers:
+  # 数字后量词调频，如平时chuan传，输入数字后，首选为串，结果如：1串，想关闭清空列表即可
+  - 个只名位口人头匹条群批伙多 # 人物动物
+  - 张把件台部块根颗粒滴片朵面扇顶栋座所辆艘架盏支枝杆 # 物品建筑
+  - 双对副套打串束排阵堆叠摞扎 # 成组集合
+  - 杯瓶盒包份碗锅盆桶袋罐盘 # 包装容器
+  - 次场局回趟顿番遍声项宗桩款步招 # 动作事件
+  - 年月天周岁秒分刻代期届任夜季 # 时间周期
+  - 本册篇首句段卷幅节堂门帖字行 # 文化作品
+  - 米寸尺里斤两吨克升元角毛笔百千万亿 # 度量货币
+
+super_tips:
+  db_name: "tips" # 可选字段，不写的话默认使用 "tips"，相对路径
+  tips_key: "comma" # key英文单词不清楚去default找
+  files:
+  # 自定义数据文件列表（可选，不配置则使用默认文件）
+  - lua/data/tips_show.txt # 仍可保留默认文件
+  #- lua/data/my_tips.txt     # 用户自定义文件
+  disabled_types:
+  - "禁用类型A"
+  - "禁用类型B"
+  # 禁用的 tips 类型，初始化 tips 数据库的时候会直接忽略相关规则，修改部署后生效
+  # 可选项为：偏旁，符号，化学式，时间，符号，组字，翻译，表情，货币，车牌, 单位
+
+
+  # Emoji
+emoji:
+  option_name: emoji # 对应 switches 中的 name
+  opencc_config: emoji.json # 选择要加载的 OpenCC 配置
+  inherit_comment: true
+
+# 简繁切换
+traditionalize:
+  option_name: traditionalization
+  # opencc_config: s2t.json   # s2t.json | s2hk.json | s2tw.json | s2twp.json
+  opencc_config: s2t.json
+  tips: char # 转换提示: all 都显示 | char 仅单字显示 | none 不显示。
+  tags: [ abc ] # 限制在对应 tag，不对其他如反查的内容做简繁转换
+
+std_hk:
+  opencc_config: t2hk.json
+  option_name: std_hk
+  tips: all
+  tags: [ abc ]
+
+std_tw:
+  opencc_config: t2tw.json
+  option_name: std_tw
+  tips: all
+  tags: [ abc ]
+
+chinese_english:
+  option_name: chinese_english
+  opencc_config: chinese_english.json
+  tips: char
+  comment_format:
+  - "xform/-/ /"
+
+wanxiang_lookup:
+  #设置归属于super_lookup.lua
+  tags: [ abc ] # 检索当前tag的候选
+  key: "`" # 输入中反查引导符，要添加到 speller/alphabet
+  lookup: [ wanxiang_reverse ] #反查滤镜数据库，万象都合并为一个了
+  enable_tone: true #启用声调反查
+  data_source: [ 'aux', 'db' ]
+  #data_source: ['db', 'aux']
+  #用来配置你的反查数据来自哪里，注释aux：即词库携带的辅助编码，数据库db：即反查方案携带的两分、多分、笔画
+  #谁在前哪种权重高比如 身db dian即dm，深aux dm 就能让相应的候选排在前面
+  #但注释在前有时候与笔画的感知会有一定冲突，可针对习惯使用一类数据库即可
+
+aux_code:
+  storage: "db" # 存储模式：db=数据库，text=内存
+  trigger_word: "@" # 触发键
+  show_aux_notice: "trigger" # 显示辅助码注释方式：always=总是显示，trigger=触发后显示，none=始终不显示
+
+# 处理符合特定规则的输入码，如网址、反查
+recognizer:
+  import_preset: default # 从 default.yaml 继承通用的
+  patterns:
+    # 再增加方案专有的：
+    punct: "^/([0-9]|10|[A-Za-z]+)$" # 响应 symbols.yaml 的 symbols
+    wanxiang_reverse: "^`[A-Za-z]*$" # 响应部件拆字与笔画的反查，与 radical_lookup/prefix 匹配
+    add_user_dict: "^``[A-Za-z/`']*$" #自造词
+    unicode: "^U[a-f0-9]+" # 脚本将自动获取第 2 个字符 U 作为触发前缀，响应 lua_translator@unicode，输出 Unicode 字符
+    number: "^R[0-9]+[.]?[0-9]*" # 脚本将自动获取第 2 个字符 R 作为触发前缀，响应 lua_translator@number_translator，数字金额大写
+    sjc: "^[/o]rc\\d+[-+=op]?$"
+    yr1: "^N0[1-9]?0?[1-9]?"
+    yr2: "^N1[02]?0?[1-9]?"
+    yr3: "^N0[1-9]?[1-2]?[1-9]?"
+    yr4: "^N1[02]?[1-2]?[1-9]?"
+    yr5: "^N0[1-9]?3?[01]?"
+    yr6: "^N1[02]?3?[01]?"
+    nyr1: "^N19?[0-9]?[0-9]?[0-1]?[0-9]?[0-9]?[0-9]?"
+    nyr2: "^N20?[0-9]?[0-9]?[0-1]?[0-9]?[0-9]?[0-9]?"
+    calculator: "^V.*$" #计算器功能引导
+    url: "^(www[.]|https?:|ftp[.:]|mailto:|file:).*$" # URL
+
+# 标点符号
+# punctuator 下面有三个子项：
+# 设置为一个映射，就自动上屏；设置为多个映射，如 '/' : [ '/', ÷ ] 则进行复选。
+#   full_shape: 全角没改，使用预设值
+#   half_shape: 标点符号全部直接上屏，和 macOS 自带输入法的区别是
+#              '|' 是半角的，
+#              '~' 是半角的，
+#              '`'（反引号）没有改成 '·'（间隔号）。
+#   symbols    Rime 的预设配置是以 '/' 前缀开头输出一系列字符，自定义的修改 symbols.yaml
+punctuator:
+  digit_separators: ":,." #数字分隔符
+  __include: wanxiang_symbols:/symbol_table # 从 symbols.yaml 导入配置
+
+# 从 default 继承快捷键
+key_binder:
+  import_preset: default # 从 default.yaml 继承通用的
+  # Lua 配置: 以词定字（上屏当前词句的第一个或最后一个字），和中括号翻页有冲突
+  select_first_character: "bracketleft" # 左中括号 [
+  select_last_character: "bracketright" # 右中括号 ]
+  sequence:
+    # Lua 配置：手动排序的快捷键 super_sequence.lua，不要用方向键，各种冲突，一定要避免冲突
+    up: "Control+j" # 上移
+    down: "Control+k" # 下移
+    reset: "Control+l" # 重置
+    pin: "Control+p" # 置顶
+  # Lua 配置: shijian.lua 的引导符，涉及：日期、时间、节日、节气、生日、问候模板等功能
+  shijian_keys: [ "/", "o" ]
+  # Lua 配置: 超级tips上屏按键
+  tips_key: "comma" #修改时候去default找
+  bindings:
+  # 也可以再增加方案专有的
+  - { when: composing, accept: "Control+e", toggle: chinese_english }
+  #使用快捷键Control+m/z分别开启和关闭墨奇或自然码辅助码拆分显示
+  - { when: composing, accept: "Control+m", toggle: chaifen_switch }
+  - { when: composing, accept: "Control+Q", toggle: moqi_ultra_all }
+  - { when: composing, accept: "Control+a", toggle: fuzhu_hint }
+  #通过快捷键Control+s使得输入码显示音调
+  - { when: composing, accept: "Control+s", toggle: tone_display }
+  - { when: composing, accept: "Control+T", toggle: super_tips }
+  #通过快捷键Control+g开启字符集过滤
+  - { when: composing, accept: "Control+g", toggle: extended_charset }
+  # 使用 tab 在不同音节之间跳转
+  - { when: has_menu, accept: "Tab", send: "Control+Right" }
+  - { when: composing, accept: "Tab", send: "Control+Right" }
+  #通过stick.lua显示到注释里，用来上屏带/的简码词汇。最好是用句号，这样可以与手机上可以做同样的定义，保持同样的习惯
+  - { when: composing, accept: "Control+N", toggle: emoji }
+  - { when: composing, accept: "Control+S", toggle: full_shape }
+  - { when: composing, accept: "Control+A", toggle: ascii_punct }
+  - { when: composing, accept: "Control+P", toggle: prediction }
+  - { when: composing, accept: "Control+C", toggle: pinyinhint }
+  - { when: composing, accept: "Control+u", toggle: unicode_comment }
+  - { when: has_menu, accept: "Tab", send: "Control+Right" }
+  - { when: composing, accept: "Tab", send: "Control+Right" }
+  - { when: composing, accept: "Alt+z", send_sequence: '{Home}{`}{`}{End}' }
+  #通过按下/发送/+1节约一个按键，不冲突的时候可以开启
+  - { match: "[a-z]{1,4}", accept: ":", send_sequence: "/1" }
+  - { match: "^.*`$", accept: "`", send_sequence: '{BackSpace}{Home}{`}{`}{End}' }
+  #通过按下/发送/+1节约一个按键，不冲突的时候可以开启
+  #- { match: "[a-z]{1,4}", accept: "/",  send_sequence: "/1" }
+  #① 翻页 , .
+  # - { when: paging, accept: comma, send: Page_Up }
+  # - { when: has_menu, accept: period, send: Page_Down }
+  #② 翻页 [ ]
+  # - { when: paging, accept: bracketleft, send: Page_Up }
+  # - { when: has_menu, accept: bracketright, send: Page_Down }
+  #③ 翻页 - =
+  - { when: has_menu, accept: minus, send: Page_Up }
+  - { when: has_menu, accept: equal, send: Page_Down }
+  # Option/Alt + ←/→ 切换光标至下/上一个拼音
+  - { when: composing, accept: Alt+Left, send: Shift+Left }
+  - { when: composing, accept: Alt+Right, send: Shift+Right }
+  - { when: always, toggle: ascii_punct, accept: Control+Shift+numbersign } # 切换中英标点
+  - { when: always, toggle: std_opencc, accept: Control+Shift+dollar } # 切换简繁
+  - { when: always, accept: Shift+space, select: .next } #下一个方案
+  #在预测符号状态下，按下斜杠提交清空与斜杠
+  - { match: "^›+$", accept: "backslash", send_sequence: '{Clear}{backslash}' }
+  - { match: "^›+$", accept: "comma", send_sequence: '{Clear}{comma}' }
+  - { match: "^›+$", accept: "period", send_sequence: '{Clear}{period}' }
+  - { match: "^›+$", accept: "Return", send_sequence: '{Clear}{Return}' }
+
+editor:
+  bindings:
+    space: confirm # 空格键：上屏候选项
+    Return: commit_raw_input # 回车键：上屏原始输入
+    Control+Return: commit_script_text # Ctrl+回车键：上屏变换后输入（经过 preedit转换的）
+    Control+Shift+Return: commit_comment # Ctrl+Shift+回车键：上屏 comment
+    BackSpace: revert # 退格键：向前删除（撤消上次输入）
+    Delete: delete # Delete 键：向后删除
+    Control+BackSpace: back_syllable # Ctrl+退格键：删除一个音节
+    Control+Delete: delete_candidate # Ctrl+Delete键：删除或降权候选项
+    Escape: cancel # Esc 键：取消输入
+
+# 在边界按音节移动，在音节内部按字符移动  rewind , forward
+# 按字符移动（循环）       left_by_char , right_by_char
+# 按字符移动（不循环）     left_by_char_no_loop , right_by_char_no_loop
+# 按音节跳转（循环）       left_by_syllable , right_by_syllable
+# 按音节跳转（不循环）     left_by_syllable_no_loop , right_by_syllable_no_loop
+
+# 拼写设定
+speller:
+  # table_translator翻译器，支持自动上屏。例如 “zmhu”可以自动上屏“怎么回事”
+  #  auto_select: true
+  #  auto_select_pattern: ^[a-z]+/|^[a-df-zA-DF-Z]\w{3}|^e\w{4}
+  # 如果不想让什么标点直接上屏，可以加在 alphabet，或者编辑标点符号为两个及以上的映射
+  alphabet: zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA1234567890`;/\@
+  # initials 定义仅作为始码的按键，排除 ` 让单个的 ` 可以直接上屏
+  initials: zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA/
+  delimiter: " '" # 第一位<空格>是拼音之间的分隔符；第二位<'>表示可以手动输入单引号来分割拼音。
+  visual_delimiter: " " # super_preedit.lua配置：是否让分隔符号跟着一起转换，例如nǐ'hǎo 在实际使用中表现出视觉拥挤，我们可以让delimiter平时是'转换为拼音的时候使用空格nǐ hǎo，更符合实际。
+  algebra:
+    __patch:
+    #- 模糊音             #模糊音选择性开启
+    - wanxiang_algebra:/pro/小鹤双拼 #拼音转双拼码
+    - wanxiang_algebra:/pro/直接辅助 #辅助码部分
+
+###############################以下是拼写运算规则中全拼转双拼码以及形码的过程，按照不同的方案规则划分段落###########################
+
+
+user_dict_set:
+  dictionary: wanxiang_pro
+  initial_quality: 2.5
+  enable_completion: false
+  enable_sentence: false
+  core_word_length: 4 # >0 启用，按段学词 + 相邻段拼接
+  max_word_length: 7 # >0 启用，过长短语不记整词，只加元素权重
+  contextual_suggestions: false
+  max_homophones: 8
+  max_homographs: 8
+  spelling_hints: 50
+  comment_format:
+  enable_user_dict: true
+  user_dict: zc
+  # 自定义词典加词(ac引导)
+add_user_dict:
+  tag: add_user_dict
+  dictionary: wanxiang_pro
+  initial_quality: -1
+  user_dict: zc
+  enable_completion: true # 提前显示尚未输入完整码的字〔仅 table_translator 有效〕
+  enable_user_dict: true
+  spelling_hints: 50
+  enable_auto_phrase: false # lua造词功能，在custom开启，相关功能位于auto_phrase.lua，开启后：模型能造的句子不造词，现有的词不造词，只造词库没有的，选词可造词
+  comment_format:
+  prefix: "``"
+  tips: "〔开始造词〕"
+
+moran:
+  quick_code_indicator: "⚡"
+  enable_quick_code_hint: true # 在解除 lua_filter 註釋前不生效！
+  # 取消單字的簡快碼提示
+  quick_code_hint_skip_chars: false
+  inject_fixed_chars: true # 是否輸出簡碼碼表單字，例：輸入 jwrg 時，次選爲「佳」
+  inject_fixed_words: true # 是否輸出簡碼碼表詞語，例：輸入 lmsd 時，次選爲「兩面三刀」
+  # 單字或詞輔的輔助碼提示
+  #
+  # 單字輔助碼會顯示出所有可能的輔助碼，且不顯示拆分
+  # 建議使用 Ctrl+i 切換輔助碼拆分提示功
+  #
+  # 詞輔助碼提示僅在開啓 enable_word_filter 時生效
+  # 具體提示格式請參考上面「詞輔功能」的說明
+
+  ijrq:
+    enable: true # 是否啓用單字的出簡讓全？
+    defer: 2 # 延遲多少位？若不設置该项，或值小於等於 0，則推遲到第二頁的首選
+    show_hint: true # 若讓全，則提示簡碼打法
+    # 詞語級「讓全」，對二、三、四字詞有效
+    # 例：假設 lmjx 的輸出是 1.連接 2.鏈接
+    # 想要「鏈接」時，增加 f ，但是由於這兩個候選仍然共享 lmjxf 編碼，因此順序不變。
+    # 若開啓詞語級讓全，則 lmjxf 的首選會被調整爲「鏈接」
+    ##此开关已经把单字让简出全整合了
+    enable_word: true
+    # 延遲候選個數。必須是大於等於 1 的整數才有效果。
+    enable_word_defer: 3
+    # 僅在設定 *毫秒* 之後，才有詞語級讓全效果
+    # 該值可以設定爲「檢視候選發現錯誤 -> 然後補充輔助碼」的時長
+    #     （根據個人情況設定，一般爲 200 上下）
+    # （僅 librime >= 1.14 可用）
+    enable_word_delay: 250
+  # 「置頂」功能相關設置
+  # 輸入時通過快捷鍵 Ctrl+t 可以將高亮顯示的候選置頂，被置頂的候選位置固定，不再參與調頻
+  # 對同一輸入碼最高支持8個置頂詞，``當嘗試置頂第9個詞時，最早被置頂的詞將會失效
+  pin:
+    # 「置頂」功能開關
+    enable: true
+    # 置頂詞提示符
+    indicator: ""
+    #“Panacea”加上单词功能
+    #通过输入“代码A”//“代码B”实现造词功能。代码A是这个新单词的新代码。代码B是目前可以输入的代码。
+    # 例如，进入tnfb无法获得“头脑风暴”的候选人。此时，我们可以输入tnfb//tbnkfgbk，然后按空格键让屏幕上显示“头脑风暴”的候选人。屏幕上的单词将被添加到用户的库中，然后我们可以使用tnfb来获取它。“头脑风暴”是一个候选人。
+    #创建的单词等同于固定的单词。
+    panacea:
+      # 加词状态提示
+      prompt: "〔首选·加词〕"
+      # 引导符
+      infix: "//"
+      #自由单词加法模式开关。 打开此模式后，输入“代码A”//并在屏幕上输入空格以输入单词添加状态。 此时，您可以连续且不受限制地输入，并再次按x//space退出单词添加状态。 在此期间输入的内容将被记录为“编码A”的新固定单词
+      #此模式适合制作一些混合单词，如“A4纸”和“KOS-MOS”等
+      freestyle: true

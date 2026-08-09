@@ -1,0 +1,26 @@
+__build_info:
+  rime_version: 1.13.1
+  timestamps:
+    default: 1772546190
+    default.custom: 1782027540
+    moran_charset.custom: 0
+    moran_charset.schema: 1782016857
+menu:
+  alternative_select_labels:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+  page_size: 6
+schema:
+  name: "勿用·工具方案"
+  schema_id: moran_charset
+  version: 1.0
+translator:
+  dictionary: moran_charset

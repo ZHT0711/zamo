@@ -1,0 +1,52 @@
+# Rime dictionary
+# encoding: utf-8
+# #https://github.com/amzxyz/RIME-LMDG
+---
+name: mixed
+version: "LTS"
+sort: by_weight
+...
+C语言	C; yǔ;yk yán;wk	131
+Go语言	Go; yǔ;yk yán;wk	97
+JD京东	JD; jīng;wx dōng;ax	97
+JD自营	JD; zì;po yíng;ck	331
+JK制服	JK; zhì;nd fú;oy	297
+LAN口	LAN; kǒu;la	97
+LED灯	LED; dēng;hd	97
+LED屏	LED; píng;uk	97
+Mac版	Mac; bǎn;py	172
+Mac端	Mac; duān;le	107
+Q群管家	Q; qún;yy guǎn;vl jiā;bu	33
+QQ表情	QQ; biǎo;fy qíng;xo	33
+QQ等级	QQ; děng;vc jí;sj	33
+QQ登录	QQ; dēng;bb lù;eu	33
+QQ动态	QQ; dòng;yl tài;tx	33
+QQ飞车	QQ; fēi;vd chē;au	33
+QQ号码	QQ; hào;kk mǎ;um	33
+QQ好友	QQ; hǎo;nz yǒu;uy	33
+QQ红包	QQ; hóng;sg bāo;bs	33
+QQ会员	QQ; huì;ry yuán;kb	33
+QQ空间	QQ; kōng;bg jiān;mo	33
+QQ聊天	QQ; liáo;ee tiān;ad	33
+QQ密码	QQ; mì;bu mǎ;um	33
+QQ拼音	QQ; pīn;fk yīn;lo	33
+QQ钱包	QQ; qián;jj bāo;bs	33
+QQ签名	QQ; qiān;vq míng;xk	33
+QQ三国	QQ; sān;ae guó;ky	33
+QQ视频	QQ; shì;pj pín;vy	33
+QQ相册	QQ; xiàng;mo cè;ka	33
+QQ消息	QQ; xiāo;do xī;zx	33
+QQ音速	QQ; yīn;lo sù;zu	33
+QQ音乐	QQ; yīn;lo yuè;px	33
+QQ影音	QQ; yǐng;op yīn;lo	33
+QQ游戏	QQ; yóu;dz xì;yg	33
+QQ邮箱	QQ; yóu;ye xiāng;vo	33
+QQ语音	QQ; yǔ;yk yīn;lo	33
+QQ注册	QQ; zhù;dv cè;ka	33
+哆啦A梦	duō;kx lā;kl A; mèng;mx	39
+飞牛OS	fēi;vd niú;pu OS;	74
+改bug	gǎi;jw BUG;	256
+公网IP	gōng;bs wǎng;kx IP;	229
+CNC加工	CNC; jiā;lk gōng;aa	65
+CNY账户	CNY; zhàng;bi hù;du	39
+WiFi伴侣	WIFI; bàn;rb lǚ;rk	139

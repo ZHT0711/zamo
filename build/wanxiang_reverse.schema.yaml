@@ -1,0 +1,107 @@
+__build_info:
+  rime_version: 1.13.1
+  timestamps:
+    default: 1772546190
+    default.custom: 1782027540
+    wanxiang_algebra: 1772893141
+    wanxiang_algebra.custom: 0
+    wanxiang_reverse.custom: 0
+    wanxiang_reverse.schema: 1771415802
+engine:
+  filters:
+    - uniquifier
+  processors:
+    - key_binder
+    - speller
+    - selector
+    - navigator
+    - express_editor
+  segmentors:
+    - abc_segmentor
+  translators:
+    - echo_translator
+    - table_translator
+key_binder:
+  bindings:
+    - {accept: "Shift+Tab", send: "Shift+Left", when: composing}
+    - {accept: "Control+k", toggle: xxxxx, when: composing}
+    - {accept: KP_0, send: 0, when: composing}
+    - {accept: KP_1, send: 1, when: composing}
+    - {accept: KP_2, send: 2, when: composing}
+    - {accept: KP_3, send: 3, when: composing}
+    - {accept: KP_4, send: 4, when: composing}
+    - {accept: KP_5, send: 5, when: composing}
+    - {accept: KP_6, send: 6, when: composing}
+    - {accept: KP_7, send: 7, when: composing}
+    - {accept: KP_8, send: 8, when: composing}
+    - {accept: KP_9, send: 9, when: composing}
+    - {accept: KP_Decimal, send: period, when: composing}
+    - {accept: KP_Multiply, send: asterisk, when: composing}
+    - {accept: KP_Add, send: plus, when: composing}
+    - {accept: KP_Subtract, send: minus, when: composing}
+    - {accept: KP_Divide, send: slash, when: composing}
+    - {accept: KP_Enter, send: Return, when: composing}
+menu:
+  alternative_select_labels:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+  page_size: 6
+schema:
+  author: amzxyz
+  description: |
+    万象的反查功能模块，方案融合了组字与笔画的能力
+
+  name: "万象：拆分与笔画反查"
+  schema_id: wanxiang_reverse
+  version: LTS
+speller:
+  algebra:
+    - "derive/^([jqxy])u(?=^|$|')/$1v/"
+    - "derive/'([jqxy])u(?=^|$|')/'$1v/"
+    - "derive/^([aoe])([ioun])(?=^|$|')/$1$1$2/"
+    - "derive/'([aoe])([ioun])(?=^|$|')/'$1$1$2/"
+    - "xform/^([aoe])(ng)?(?=^|$|')/$1$1$2/"
+    - "xform/'([aoe])(ng)?(?=^|$|')/'$1$1$2/"
+    - "xform/iu(?=^|$|')/<q>/"
+    - "xform/(.)ei(?=^|$|')/$1<w>/"
+    - "xform/uan(?=^|$|')/<r>/"
+    - "xform/[uv]e(?=^|$|')/<t>/"
+    - "xform/un(?=^|$|')/<y>/"
+    - "xform/^sh/<u>/"
+    - "xform/^ch/<i>/"
+    - "xform/^zh/<v>/"
+    - "xform/'sh/'<u>/"
+    - "xform/'ch/'<i>/"
+    - "xform/'zh/'<v>/"
+    - "xform/uo(?=^|$|')/<o>/"
+    - "xform/ie(?=^|$|')/<p>/"
+    - "xform/([a-z>])i?ong(?=^|$|')/$1<s>/"
+    - "xform/ing(?=^|$|')|uai(?=^|$|')/<k>/"
+    - "xform/([a-z>])ai(?=^|$|')/$1<d>/"
+    - "xform/([a-z>])en(?=^|$|')/$1<f>/"
+    - "xform/([a-z>])eng(?=^|$|')/$1<g>/"
+    - "xform/[iu]ang(?=^|$|')/<l>/"
+    - "xform/([a-z>])ang(?=^|$|')/$1<h>/"
+    - "xform/ian(?=^|$|')/<m>/"
+    - "xform/([a-z>])an(?=^|$|')/$1<j>/"
+    - "xform/([a-z>])ou(?=^|$|')/$1<z>/"
+    - "xform/[iu]a(?=^|$|')/<x>/"
+    - "xform/iao(?=^|$|')/<n>/"
+    - "xform/([a-z>])ao(?=^|$|')/$1<c>/"
+    - "xform/ui(?=^|$|')/<v>/"
+    - "xform/in(?=^|$|')/<b>/"
+    - "xform/'|<|>//"
+    - "xlit/HSPZN/hspzn/"
+  alphabet: "abcdefghijklmnopqrstuvwxyz;"
+  delimiter: " '"
+translator:
+  dictionary: wanxiang_reverse
+  enable_user_dict: false

@@ -1,0 +1,26 @@
+__build_info:
+  rime_version: 1.13.1
+  timestamps:
+    default: 1772546189
+    default.custom: 1782027540
+    wanxiang_chaifen.custom: 0
+    wanxiang_chaifen.schema: 1770907856
+menu:
+  alternative_select_labels:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+  page_size: 6
+schema:
+  name: "万象：拆分注释滤镜"
+  schema_id: wanxiang_chaifen
+  version: 1.0
+translator:
+  dictionary: wanxiang_chaifen

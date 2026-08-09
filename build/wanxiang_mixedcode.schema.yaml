@@ -1,0 +1,172 @@
+__build_info:
+  rime_version: 1.13.1
+  timestamps:
+    default: 1772546189
+    default.custom: 1782027539
+    wanxiang_algebra: 1772893141
+    wanxiang_algebra.custom: 0
+    wanxiang_mixedcode.custom: 0
+    wanxiang_mixedcode.schema: 1771415812
+engine:
+  filters:
+    - uniquifier
+  processors:
+    - key_binder
+    - speller
+    - selector
+    - navigator
+    - express_editor
+  segmentors:
+    - abc_segmentor
+  translators:
+    - echo_translator
+    - table_translator
+key_binder:
+  bindings:
+    - {accept: "Shift+Tab", send: "Shift+Left", when: composing}
+    - {accept: "Control+k", toggle: xxxxx, when: composing}
+    - {accept: KP_0, send: 0, when: composing}
+    - {accept: KP_1, send: 1, when: composing}
+    - {accept: KP_2, send: 2, when: composing}
+    - {accept: KP_3, send: 3, when: composing}
+    - {accept: KP_4, send: 4, when: composing}
+    - {accept: KP_5, send: 5, when: composing}
+    - {accept: KP_6, send: 6, when: composing}
+    - {accept: KP_7, send: 7, when: composing}
+    - {accept: KP_8, send: 8, when: composing}
+    - {accept: KP_9, send: 9, when: composing}
+    - {accept: KP_Decimal, send: period, when: composing}
+    - {accept: KP_Multiply, send: asterisk, when: composing}
+    - {accept: KP_Add, send: plus, when: composing}
+    - {accept: KP_Subtract, send: minus, when: composing}
+    - {accept: KP_Divide, send: slash, when: composing}
+    - {accept: KP_Enter, send: Return, when: composing}
+menu:
+  alternative_select_labels:
+    - 1
+    - 2
+    - 3
+    - 4
+    - 5
+    - 6
+    - 7
+    - 8
+    - 9
+    - 10
+  page_size: 6
+schema:
+  author: amzxyz
+  description: |
+    混合编码负责将英文、中英文混合、携带符号的词组等全部统一到这个方案中完成
+
+  name: "万象：英文与混合编码"
+  schema_id: wanxiang_mixedcode
+  version: LTS
+speller:
+  algebra:
+    - "derive|^([A-Z].{1,2})$|$1/|"
+    - "derive/(?<!\\d)1([1-9])(?!\\d)/'shí'$1/"
+    - "derive/([1-9])0000(?!0)/$1'wàn'/"
+    - "derive/([1-9])000(?!0)/$1'qiān'/"
+    - "derive/([1-9])00(?!0)/$1'bǎi'/"
+    - "derive/([2-9])0(?!0)/$1'shí'/"
+    - "derive/(?<!\\d)([2-9])([1-9])(?!\\d)/$1'shí'$2/"
+    - "derive/1([4-7|9])/$1'teen'/"
+    - "derive/11/'eleven'/"
+    - "derive/12/'twelve'/"
+    - "derive/13/'thirteen'/"
+    - "derive/15/'fifteen'/"
+    - "derive/18/'eighteen'/"
+    - "derive/0/o/"
+    - "derive/0/O/"
+    - "derive/0/'zero'/"
+    - "derive/1/'one'/"
+    - "derive/10/'ten'/"
+    - "derive/2/'to'/"
+    - "derive/2/'two'/"
+    - "derive/3/'three'/"
+    - "derive/4/'for'/"
+    - "derive/4/'four'/"
+    - "derive/5/'five'/"
+    - "derive/6/'six'/"
+    - "derive/7/'seven'/"
+    - "derive/8/'eight'/"
+    - "derive/9/'nine'/"
+    - "derive/10/'shí'/"
+    - "derive/0/'líng'/"
+    - "derive/1/'yī'/"
+    - "derive/2/'èr'/"
+    - "derive/3/'sān'/"
+    - "derive/4/'sì'/"
+    - "derive/5/'wǔ'/"
+    - "derive/6/'liù'/"
+    - "derive/7/'qī'/"
+    - "derive/8/'bā'/"
+    - "derive/9/'jiǔ'/"
+    - "derive/\\+/'plus'/"
+    - "derive/\\./'dot'/"
+    - "derive/@/'at'/"
+    - "derive/-/'hyphen'/"
+    - "derive/#/'hash'/"
+    - "derive/#/'number'/"
+    - "derive/#/'sharp'/"
+    - "derive/♯/'sharp'/"
+    - "derive / 'slash'"
+    - "derive/&/'and'/"
+    - "derive/%/'percent'/"
+    - "derive/--/'jiǎn'jiǎn'/"
+    - "derive/^(.*)-$/$1'jiǎn/"
+    - "derive/-/'/"
+    - "derive/_/'/"
+    - "derive/\\./'diǎn'/"
+    - "derive/\\+/'jiā'/"
+    - "derive/·/'/"
+    - "derive/#/'jǐng'/"
+    - "derive/[@]/'ài'tè'/"
+    - "derive/[@]/'quān'a'/"
+    - "xform/'+/'/"
+    - "xform/^'(.*)$/$1/"
+    - "xform/^(.*)'$/$1/"
+    - "derive/^.+$/\\U$0/"
+    - "xlit/āáǎàōóǒòēéěèīíǐìūúǔùǖǘǚǜü/aaaaooooeeeeiiiiuuuuvvvvv/"
+    - "derive/('|^)([jqxy])u(?=^|$|')/$1$2v/"
+    - "derive/('|^)([aoe])([ioun])(?=^|$|')/$1$2$2$3/"
+    - "xform/('|^)([aoe])(ng)?(?=^|$|')/$1$2$2$3/"
+    - "xform/('|^)([qdjlxnm])iu(?=^|$|')/$1$2<q>/"
+    - "xform/('|^)([qyjlxn])[uv]e(?=^|$|')/$1$2<t>/"
+    - "xform/^sh/<u>/"
+    - "xform/^ch/<i>/"
+    - "xform/^zh/<v>/"
+    - "xform/'sh/'<u>/"
+    - "xform/'ch/'<i>/"
+    - "xform/'zh/'<v>/"
+    - "xform/('|^)((?:<v>|[aoewtpdfghklzvbnm]))ei(?=^|$|')/$1$2<w>/"
+    - "xform/('|^)((?:<v>|<i>|<u>|[qrtysdghjklzxc]))un(?=^|$|')/$1$2<y>/"
+    - "xform/('|^)((?:<v>|<i>|<u>|[qrtysdghjklzxcn]))uan(?=^|$|')/$1$2<r>/"
+    - "xform/('|^)((?:<v>|<i>|<u>|[tsdghklzcn]))uo(?=^|$|')/$1$2<o>/"
+    - "xform/('|^)([qtpdjlxbnm])ie(?=^|$|')/$1$2<p>/"
+    - "xform/('|^)((?:<v>|<i>|[qrtysdghjklzxcn]))i?ong(?=^|$|')/$1$2<s>/"
+    - "xform/('|^)([qtypdjlxnm])ing(?=^|$|')|('|^)((?:<i>|<u>|[gh]))uai(?=^|$|')/$1$2<k>/"
+    - "xform/('|^)((?:<i>|<u>|[aoewtpsdghklzcbnm]))ai(?=^|$|')/$1$2<d>/"
+    - "xform/('|^)((?:<v>|<i>|<u>|[wrtpsdfghkzcbnm]))en(?=^|$|')/$1$2<f>/"
+    - "xform/('|^)((?:<v>|<i>|<u>|[wrtpsdfghklzcbnm]))eng(?=^|$|')/$1$2<g>/"
+    - "xform/('|^)((?:<v>|<i>|<u>|[aoeqghjkxbnl]))[iu]ang(?=^|$|')/$1$2<l>/"
+    - "xform/('|^)((?:<v>|<i>|<u>|[wrtypsdfghklzcbnm]))ang(?=^|$|')/$1$2<h>/"
+    - "xform/('|^)([qtpdjlxbnm])ian(?=^|$|')/$1$2<m>/"
+    - "xform/('|^)((?:<v>|<i>|<u>|[wrtypsdfghklzcbnm]))an(?=^|$|')/$1$2<j>/"
+    - "xform/('|^)((?:<v>|<i>|<u>|[rtypsdfghklzm]))ou(?=^|$|')/$1$2<z>/"
+    - "xform/('|^)([tghkljx])[iu]a(?=^|$|')/$1$2<x>/"
+    - "xform/('|^)([qtpdjlxbnm])iao(?=^|$|')/$1$2<n>/"
+    - "xform/('|^)((?:<v>|<i>|<u>|[rtypsdghklzcbnm]))ao(?=^|$|')/$1$2<c>/"
+    - "xform/('|^)((?:<v>|<i>|<u>|[tsdghkzc]))ui(?=^|$|')/$1$2<v>/"
+    - "xform/('|^)([qypjlmnbx])in(?=^|$|')/$1$2<b>/"
+    - "xform/'|<|>//"
+    - "derive/^.+$/\\L$0/"
+    - "derive/^([A-Z]{1})/\\L$1/"
+    - "derive/^([a-z]{2})/\\U$1/"
+    - "erase/.*[\\-+'_#@\\.·0-9].*$/"
+  alphabet: "abcdefghijklmnopqrstuvwxyz;"
+  delimiter: " '"
+translator:
+  dictionary: wanxiang_mixedcode
+  enable_user_dict: false

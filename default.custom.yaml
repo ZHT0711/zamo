@@ -1,0 +1,11 @@
+customization:
+  distribution_code_name: hamster3
+  distribution_version: ""
+  generator: "Rime::SwitcherSettings"
+  modified_time: "Sun Jun 21 15:39:00 2026"
+  rime_version: 1.17.0
+patch:
+  schema_list:
+    - {schema: wanxiang_pro}
+    - {schema: wanxiang_english}
+    - {schema: moran_fixed}
