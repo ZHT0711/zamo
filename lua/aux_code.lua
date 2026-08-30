@@ -10,12 +10,14 @@
 -- 6. 支持多方案辅助码文件，根据name_space自动选择
 -- 7. 持续选词上屏时保持辅助码分隔符存在
 -- 8. 支持用触发键分割辅助码，依次匹配词组中的每个字
+-- 9. 支持辅助码触发后仅输出词语（过滤单字候选），单字候选完全跳过辅助码计算，提升触发后的候选性能
 -- 
 -- 配置示例：
 --   aux_code:
 --     storage: "db"           # 存储模式：db=数据库，text=内存
 --     trigger_word: ";"       # 触发键
 --     show_aux_notice: "always" # 显示辅助码注释方式：always=总是显示，trigger=触发后显示，none=始终不显示
+--     phrase_only: true        # 辅助码触发后是否只输出词语，过滤掉单字候选（默认false，不影响主输入模式）
 
 local AuxFilter = {}
 local bit = require("lib/bit")
@@ -26,7 +28,8 @@ local wanxiang = require("wanxiang")
 local DEFAULT_CONFIG = {
     storage = "db",           -- 存储模式：db=数据库，text=内存
     trigger_word = ";",       -- 触发键
-    show_aux_notice = "always" -- 显示辅助码注释方式
+    show_aux_notice = "always", -- 显示辅助码注释方式
+    phrase_only = false       -- 辅助码触发后是否只输出词语，过滤单字候选
 }
 
 -- 获取文件内容哈希值，使用 FNV-1a 哈希算法
@@ -70,6 +73,11 @@ local META_KEY = {
 local AUX_CODE_CACHE_LIMIT = 8192
 local AUX_SLOT_CACHE_LIMIT = 4096
 local FULL_AUX_CACHE_LIMIT = 4096
+local COMMENT_CACHE_LIMIT = 4096
+
+-- 触发辅助码后，单次按键最多处理这么多候选就停止遍历。
+-- 候选框本来也显示不了那么多，超出部分继续跑 get_aux_code/fullAux 纯属浪费。
+local MAX_PROCESSED_AFTER_TRIGGER = 60
 
 -- The filter runs once per keystroke and visits every candidate. Keep its
 -- static dictionary results bounded so a long-running input method stays fast.
@@ -160,6 +168,13 @@ function AuxFilter.init(env)
     -- 设定是否显示辅助码，默认为显示
     env.show_aux_notice = config:get_string("aux_code/show_aux_notice") or DEFAULT_CONFIG.show_aux_notice
 
+    -- 是否在辅助码触发后只输出词语（过滤单字候选，单字不参与辅助码计算，提升性能）
+    local phrase_only_cfg = config:get_bool("aux_code/phrase_only")
+    if phrase_only_cfg == nil then
+        phrase_only_cfg = DEFAULT_CONFIG.phrase_only
+    end
+    env.phrase_only = phrase_only_cfg
+
     env.aux_code_cache = {}
     env.aux_code_cache_queue = {}
     env.aux_code_cache_head = 1
@@ -169,6 +184,9 @@ function AuxFilter.init(env)
     env.full_aux_cache = {}
     env.full_aux_cache_queue = {}
     env.full_aux_cache_head = 1
+    env.comment_cache = {}
+    env.comment_cache_queue = {}
+    env.comment_cache_head = 1
 
     -- 确定辅助码文件
     local filename = "lua/aux_code/ZRM_Aux-code.txt"
@@ -299,6 +317,32 @@ function AuxFilter.fullAux(env, word)
     return fullAuxCodes
 end
 
+-- 辅助码注释字符串按词缓存，避免同一个词每次按键都重新拼接一遍
+function AuxFilter.get_comment(env, word, auxCodes, fullAuxCodes)
+    local cached = env.comment_cache[word]
+    if cached ~= nil then
+        return cached or nil
+    end
+
+    local comment = nil
+    if auxCodes and #auxCodes > 0 then
+        comment = auxCodes:gsub(' ', ',')
+    elseif #fullAuxCodes >= 1 then
+        local parts_comment = {}
+        local i = 1
+        while i <= #fullAuxCodes do
+            local group = (fullAuxCodes[i] or "") .. (fullAuxCodes[i + 1] or "")
+            table.insert(parts_comment, group)
+            i = i + 2
+        end
+        comment = table.concat(parts_comment, "/")
+    end
+
+    cache_put(env, "comment_cache", "comment_cache_queue", "comment_cache_head",
+        COMMENT_CACHE_LIMIT, word, comment or false)
+    return comment
+end
+
 -- 辅助函数：按触发键分割后的片段，依次匹配候选词中的每个字
 local function match_by_parts(word, parts, fullAuxCodes)
     local charCount = utf8.len(word)
@@ -382,7 +426,7 @@ function AuxFilter.func(input, env)
         end
     end
 
-    -- 无触发键且非总是显示注释时，直接输出所有候选
+    -- 无触发键且非总是显示注释时，直接输出所有候选（主输入模式，不受 phrase_only 影响）
     if not has_trigger and env.show_aux_notice ~= "always" then
         for cand in input:iter() do yield(cand) end
         return
@@ -393,87 +437,87 @@ function AuxFilter.func(input, env)
     local second_char_candidates = {}
     local other_candidates = {}
     local sentence_candidates = {}
+    local processed_count = 0
 
     for cand in input:iter() do
-        local auxCodes = AuxFilter.get_aux_code(env, cand.text)
-        local fullAuxCodes = AuxFilter.fullAux(env, cand.text)
-        local is_phrase = (utf8.len(cand.text) or #cand.text) > 1
-
-        -- 添加辅助码注释
-        if env.show_aux_notice ~= "none" then
-            local codeComment = nil
-            if auxCodes and #auxCodes > 0 then
-                codeComment = auxCodes:gsub(' ', ',')
-            elseif #fullAuxCodes >= 1 then
-                local parts_comment = {}
-                local i = 1
-                while i <= #fullAuxCodes do
-                    local group = (fullAuxCodes[i] or "") .. (fullAuxCodes[i + 1] or "")
-                    table.insert(parts_comment, group)
-                    i = i + 2
-                end
-                codeComment = table.concat(parts_comment, "/")
-            end
-            if codeComment then
-                if cand:get_dynamic_type() == "Shadow" then
-                    local shadowText = cand.text
-                    local shadowComment = cand.comment
-                    local originalCand = cand:get_genuine()
-                    cand = ShadowCandidate(originalCand, originalCand.type, shadowText,
-                        originalCand.comment .. shadowComment .. '(' .. codeComment .. ')')
-                elseif env.show_aux_notice == "trigger" then
-                    if has_trigger then
-                        cand.comment = cand.comment .. '(' .. codeComment .. ')'
-                    end
-                else
-                    cand.comment = cand.comment .. '(' .. codeComment .. ')'
-                end
-            end
+        if has_trigger and processed_count >= MAX_PROCESSED_AFTER_TRIGGER then
+            break
         end
 
-        -- 筛选逻辑
         local candType = cand.type
-        if candType == 'sentence' or candType == 'model' then
-            table.insert(sentence_candidates, cand)
+        local is_phrase = (utf8.len(cand.text) or #cand.text) > 1
+        local is_single_char = not is_phrase and candType ~= 'sentence' and candType ~= 'model'
+
+        if env.phrase_only and has_trigger and is_single_char then
+            -- 词语模式：辅助码触发后，单字候选完全跳过辅助码计算与输出，提升性能
         else
-            if is_split then
-                -- 分割模式：所有指定字位置必须匹配
-                if #parts == 0 then
-                    yield(cand)   -- 无有效辅助码，直接输出
-                else
-                    local matched = match_by_parts(cand.text, parts, fullAuxCodes)
-                    if matched then
-                        if is_phrase then
-                            table.insert(phrase_candidates, cand)
-                        else
-                            table.insert(first_char_candidates, cand)
+            processed_count = processed_count + 1
+            local auxCodes = AuxFilter.get_aux_code(env, cand.text)
+            local fullAuxCodes = AuxFilter.fullAux(env, cand.text)
+
+            -- 添加辅助码注释（按词缓存，避免重复拼接）
+            if env.show_aux_notice ~= "none" then
+                local codeComment = AuxFilter.get_comment(env, cand.text, auxCodes, fullAuxCodes)
+                if codeComment then
+                    if cand:get_dynamic_type() == "Shadow" then
+                        local shadowText = cand.text
+                        local shadowComment = cand.comment
+                        local originalCand = cand:get_genuine()
+                        cand = ShadowCandidate(originalCand, originalCand.type, shadowText,
+                            originalCand.comment .. shadowComment .. '(' .. codeComment .. ')')
+                    elseif env.show_aux_notice == "trigger" then
+                        if has_trigger then
+                            cand.comment = cand.comment .. '(' .. codeComment .. ')'
                         end
                     else
-                        table.insert(other_candidates, cand)
+                        cand.comment = cand.comment .. '(' .. codeComment .. ')'
                     end
                 end
+            end
+
+            -- 筛选逻辑
+            if candType == 'sentence' or candType == 'model' then
+                table.insert(sentence_candidates, cand)
             else
-                -- 传统模式
-                if not auxStr or #auxStr == 0 then
-                    yield(cand)
-                elseif fullAuxCodes then
-                    if AuxFilter.match(fullAuxCodes, auxStr) then
-                        if is_phrase then
-                            table.insert(phrase_candidates, cand)
+                if is_split then
+                    -- 分割模式：所有指定字位置必须匹配
+                    if #parts == 0 then
+                        yield(cand)   -- 无有效辅助码，直接输出
+                    else
+                        local matched = match_by_parts(cand.text, parts, fullAuxCodes)
+                        if matched then
+                            if is_phrase then
+                                table.insert(phrase_candidates, cand)
+                            else
+                                table.insert(first_char_candidates, cand)
+                            end
                         else
-                            table.insert(first_char_candidates, cand)
+                            table.insert(other_candidates, cand)
                         end
-                    elseif #auxStr == 1 and AuxFilter.matchSecondOnly(fullAuxCodes, auxStr) then
-                        if is_phrase then
-                            table.insert(phrase_candidates, cand)
+                    end
+                else
+                    -- 传统模式
+                    if not auxStr or #auxStr == 0 then
+                        yield(cand)
+                    elseif fullAuxCodes then
+                        if AuxFilter.match(fullAuxCodes, auxStr) then
+                            if is_phrase then
+                                table.insert(phrase_candidates, cand)
+                            else
+                                table.insert(first_char_candidates, cand)
+                            end
+                        elseif #auxStr == 1 and AuxFilter.matchSecondOnly(fullAuxCodes, auxStr) then
+                            if is_phrase then
+                                table.insert(phrase_candidates, cand)
+                            else
+                                table.insert(second_char_candidates, cand)
+                            end
                         else
-                            table.insert(second_char_candidates, cand)
+                            table.insert(other_candidates, cand)
                         end
                     else
                         table.insert(other_candidates, cand)
                     end
-                else
-                    table.insert(other_candidates, cand)
                 end
             end
         end
