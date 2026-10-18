@@ -1,10 +1,10 @@
 __build_info:
-  rime_version: 1.13.1
+  rime_version: 1.17.0
   timestamps:
-    default: 1772546189
-    default.custom: 1782027540
+    default: 1785672436
+    default.custom: 1792241518
     wanxiang_chaifen.custom: 0
-    wanxiang_chaifen.schema: 1770907856
+    wanxiang_chaifen.schema: 1770907855
 menu:
   alternative_select_labels:
     - 1

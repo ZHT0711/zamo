@@ -1,0 +1,6 @@
+# 代码搜索关注可编辑源文件。
+build/
+**/*.userdb/
+*.gram
+*.log
+benchmark_logs/

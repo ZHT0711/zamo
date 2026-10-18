@@ -1,8 +1,8 @@
 __build_info:
-  rime_version: 1.13.1
+  rime_version: 1.17.0
   timestamps:
-    default: 1772546190
-    default.custom: 1782027540
+    default: 1785672436
+    default.custom: 1792241518
 ascii_composer:
   good_old_caps_lock: true
   switch_key:
@@ -48,9 +48,10 @@ menu:
 recognizer:
   {}
 schema_list:
-  - schema: wanxiang_pro
-  - schema: wanxiang_english
   - schema: moran_fixed
+  - schema: wanxiang_pro
+  - schema: wanxiang_reverse
+  - schema: zamo_english
 switcher:
   abbreviate_options: true
   caption: "「方案选单」"
@@ -63,6 +64,16 @@ switcher:
     - s2t
     - s2hk
     - s2tw
+    - std_t
+    - std_t2s
+    - std_t2hk
+    - std_t2tw
+    - std_t2dzing
+    - std_s
+    - std_s2t
+    - std_s2hk
+    - std_s2tw
+    - std_s2dzing
     - emoji
     - full_shape
     - prediction

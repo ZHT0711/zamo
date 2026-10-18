@@ -1,11 +1,27 @@
 customization:
-  distribution_code_name: hamster3
-  distribution_version: ""
+  distribution_code_name: Weasel
+  distribution_version: 0.17.4
   generator: "Rime::SwitcherSettings"
-  modified_time: "Sun Jun 21 15:39:00 2026"
+  modified_time: "Sat Oct 17 19:31:33 2026"
   rime_version: 1.17.0
 patch:
+  # 全局个人设置。保留 6 个候选：当前方案使用 7890 输入声调。
+  menu/page_size: 6
+  switcher/hotkeys:
+    - Control+grave
+
+  # 中英文切换行为；以下保持整理前的设置。
+  ascii_composer/good_old_caps_lock: true
+  ascii_composer/switch_key:
+    Caps_Lock: clear
+    Shift_L: commit_code
+    Shift_R: commit_code
+    Control_L: noop
+    Control_R: noop
+
+  # 选单方案顺序；其余 schema 文件是这些方案的依赖。
   schema_list:
-    - {schema: wanxiang_pro}
-    - {schema: wanxiang_english}
     - {schema: moran_fixed}
+    - {schema: wanxiang_pro}
+    - {schema: wanxiang_reverse}
+    - {schema: zamo_english}

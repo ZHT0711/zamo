@@ -1,0 +1,20 @@
+# 主方案个人设置：修改后重新部署。完整修改入口见 README.md。
+# 这里的值与整理前一致；优先在此添加补丁，避免到大文件中查找。
+patch:
+  # 当前为小鹤双拼 + 直接辅助。其他可选名称见 wanxiang_algebra.yaml。
+  speller/algebra:
+    __patch:
+    - wanxiang_algebra:/pro/小鹤双拼
+    - wanxiang_algebra:/pro/直接辅助
+
+  # 辅助码与反查
+  force_upper_aux/hotkey: period # 句号固定候选
+  aux_code/trigger_word: "@" # 临时辅助码
+  aux_code/storage: db
+  aux_code/show_aux_notice: trigger # always / trigger / none
+  super_comment/candidate_length: 2 # 辅助码提示长度，0 关闭
+
+  # 三选按键：编码为 2~3 位小写字母（或单独 V）且非 rq 开头时，单独按此键选择第三候选
+  moran/third_candidate_key: Shift+Shift_L
+  # 略码造词（Shift+B/L/Y/V/Q => X不X、X了X、X一X、X着X、X来X去），需要时取消注释启用
+  # moran/shorthands: true
