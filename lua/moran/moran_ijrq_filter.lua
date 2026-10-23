@@ -3,6 +3,7 @@
 -- Part of Project Moran
 -- License: GPLv3
 -- Version: 0.3.3
+-- 2026-10-17: 直接进入奇数码长且没有首选历史时，安全保留候选顺序。
 
 -- ChangeLog:
 --
@@ -86,6 +87,10 @@ function Module.func(t_input, env)
         local iter = moran.make_peekable(iter)
         local first = iter:peek()
         if not first then  -- No candidates
+            return
+        end
+        if not env.last_first_cand then
+            moran.yield_all(iter)
             return
         end
         local last_len = utf8.len(env.last_first_cand)

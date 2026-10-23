@@ -485,6 +485,10 @@ function panacea_translator.init(env)
     user_db.acquire()
     local pattern = string.format("(.+)%s(.+)", env.escaped_infix)
     local function on_commit(ctx)
+        if not env.pin_enable or moran.is_reverse_lookup(env) then
+            return
+        end
+
         local selected_cand = ctx:get_selected_candidate()
         if selected_cand ~= nil then
             local gen_cand = selected_cand:get_genuine()
@@ -534,19 +538,19 @@ function panacea_translator.init(env)
             return
         end
 
-        local code, original_code = ctx.input:match(pattern)
-        -- 普通上屏几乎都不是置顶操作。先判断输入格式，避免为无关上屏
-        -- 遍历 composition 并重建 genuine_text。
-        if not original_code or original_code == "" or not code or code == "" then
-            return
-        end
 
-        if commit_text and commit_text ~= "" then
+        local code, original_code = ctx.input:match(pattern)
+        if original_code and original_code ~= "" and
+            code and code ~= "" and
+            commit_text and commit_text ~= "" then
             user_db.toggle_pin_status(code, commit_text)
         end
     end
 
     local function on_update_or_select(ctx)
+        if not env.pin_enable or moran.is_reverse_lookup(env) then
+            return
+        end
         if not ctx.input then
             return
         end
@@ -585,11 +589,6 @@ function panacea_translator.func(input, seg, env)
     if not env.pin_enable or moran.is_reverse_lookup(env) then
         return
     end
-    
-    -- -- 在反查模式下禁用 panacea_translator
-    -- if moran.is_reverse_lookup(env) then
-    --     return
-    -- end
     
     local pattern = "[a-zA-Z]+" .. env.escaped_infix
     local match = input:match(pattern)

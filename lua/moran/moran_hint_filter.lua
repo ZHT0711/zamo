@@ -2,6 +2,7 @@
 -- Copyright (c) 2023-2026 ksqsf
 --
 -- Ver: 0.4.1 (增加 tips 简码提示)
+-- 2026-10-17: tips 内容检查改为 5 秒节流，保留热更新和强制重载。
 --
 -- This file is part of Project Moran
 -- Licensed under GPLv3
@@ -18,66 +19,50 @@ local Module = {}
 -- Tips reverse cache (text -> array of codes)
 local tips_reverse_cache = {}
 local tips_reverse_loaded = false
-local tips_file_mtime = 0
-
--- Get file modification time (from v0.2.1)
-function Module.get_file_mtime(filepath)
-    local file = io.open(filepath, "r")
-    if not file then return 0 end
-    file:close()
-    
-    local cmd
-    local sep = package.config:sub(1, 1)
-    if sep == "/" then
-        cmd = 'stat -f %m "' .. filepath .. '" 2>/dev/null || stat -c %Y "' .. filepath .. '" 2>/dev/null'
-    else
-        -- Lua 没有可用的 Windows stat API。返回稳定值，避免每秒全量重读
-        -- tips_user.txt；修改文件后重新部署或切换方案即可刷新缓存。
-        return 0
-    end
-    
-    local handle = io.popen(cmd)
-    if not handle then return 0 end
-    
-    local result = handle:read("*a")
-    handle:close()
-    return tonumber(result) or 0
-end
+local tips_file_content
+local tips_last_check
+local TIPS_CHECK_INTERVAL = 5
 
 -- Build reverse mapping from tips_user.txt (format: prefix：text<TAB>code)
 function Module.build_tips_reverse_cache(force_reload)
+    local now = os.time()
+    -- 热更新最多延迟 5 秒；时钟回拨和强制加载均立即检查。
+    if tips_reverse_loaded and not force_reload and tips_last_check
+        and now >= tips_last_check and now - tips_last_check < TIPS_CHECK_INTERVAL then
+        return
+    end
+    tips_last_check = now
+
     local tips_user_path = rime_api.get_user_data_dir() .. "/lua/data/tips_user.txt"
-    
-    local current_mtime = Module.get_file_mtime(tips_user_path)
-    if tips_reverse_loaded and not force_reload and current_mtime == tips_file_mtime then
+    local file = io.open(tips_user_path, "rb")
+    local content = false
+    if file then
+        content = file:read("*a") or false
+        file:close()
+    end
+    -- 比较完整内容，同长度编辑也能生效；未改变时保留已解析的表。
+    if tips_reverse_loaded and not force_reload and content == tips_file_content then
         return
     end
-    
-    tips_reverse_cache = {}
-    tips_file_mtime = current_mtime
-    
-    local file = io.open(tips_user_path, "r")
-    if not file then
-        tips_reverse_loaded = true
-        return
-    end
-    
-    for line in file:lines() do
+
+    local reverse_cache = {}
+    for line in (content or ""):gmatch("[^\r\n]+") do
         -- Parse: "类型：文本\t编码"
         local value, key = line:match("([^\t]+)\t([^\t]+)")
         if key and value then
             -- Extract text after "：" or ":" (trim whitespace)
             local text = value:match("：%s*(.-)%s*$") or value:match(":%s*(.-)%s*$")
             if text and #text > 0 and #key > 0 then
-                if not tips_reverse_cache[text] then
-                    tips_reverse_cache[text] = {}
+                if not reverse_cache[text] then
+                    reverse_cache[text] = {}
                 end
-                table.insert(tips_reverse_cache[text], key)
+                table.insert(reverse_cache[text], key)
             end
         end
     end
     
-    file:close()
+    tips_reverse_cache = reverse_cache
+    tips_file_content = content
     tips_reverse_loaded = true
 end
 
@@ -103,7 +88,7 @@ function Module.init(env)
     end
     env.quick_code_hint_indicator = env.engine.schema.config:get_string("moran/quick_code_hint_indicator")
     if env.quick_code_hint_indicator == nil then
-        env.quick_code_hint_indicator = env.engine.schema.config:get_string("moran/quick_code_indicator")
+        env.quick_code_hint_indicator = env.engine.schema.config:get_string("moran/quick_code_indicator") or ""
     end
 
     env.inject_fixed_words = env.engine.schema.config:get_bool("moran/inject_fixed_words") or false
@@ -126,6 +111,8 @@ function Module.fini(env)
     env.enable_tips_code_hint = nil
     tips_reverse_cache = {}
     tips_reverse_loaded = false
+    tips_file_content = nil
+    tips_last_check = nil
     collectgarbage()
 end
 
@@ -153,7 +140,7 @@ function Module.get_auxcode_hint(env, cand, gcand)
         end
         return codes:sub(2)
     elseif len ~= 1 and env.is_auxfilter and (gcand.type == "phrase" or gcand.type == "user_phrase") then
-        result = ""
+        local result = ""
         for i, cp in moran.codepoints(gcand.text) do
             local cpaux = env.aux_table[cp]
             if cpaux and #cpaux > 0 then
@@ -223,7 +210,7 @@ function Module.func(translation, env)
         return
     end
 
-    -- 每次翻译前检查 tips 文件是否更新
+    -- 按间隔检查 tips 文件是否更新
     if env.enable_tips_code_hint then
         Module.build_tips_reverse_cache(false)
     end

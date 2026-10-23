@@ -2,6 +2,7 @@
 -- 采用 LevelDb 数据库，支持大数据遍历、多种类型及编码混合
 -- 支持候选匹配和编码匹配，候选支持方向键高亮遍历
 -- https://github.com/amzxyz/rime-wanxiang
+-- 2026-10-17: 有界命中/未命中缓存；初始化校验完整文件内容。
 --
 -- super_tips:
 --   db_name: "lua/tips"
@@ -19,6 +20,23 @@ local DEFAULT_RECORD_TAIL = "c=0 d=0 t=0"
 local DB_FORMAT_VERSION = "1"
 
 local tips_db
+local CACHE_LIMIT = 1024
+local tip_cache, tip_cache_queue, tip_cache_head = {}, {}, 1
+
+local function clear_tip_cache()
+    tip_cache, tip_cache_queue, tip_cache_head = {}, {}, 1
+end
+
+local function cache_tip(key, value)
+    if #tip_cache_queue < CACHE_LIMIT then
+        tip_cache_queue[#tip_cache_queue + 1] = key
+    else
+        tip_cache[tip_cache_queue[tip_cache_head]] = nil
+        tip_cache_queue[tip_cache_head] = key
+        tip_cache_head = tip_cache_head % CACHE_LIMIT + 1
+    end
+    tip_cache[key] = value or false
+end
 local tips = {
     status = "pending",
     ref_count = 0,
@@ -33,7 +51,7 @@ local META_KEY = {
     files_sig = "files_signature",
 }
 
--- 将采样字节转换为安全十六进制，避免元数据串行。
+-- 将路径转换为安全十六进制，避免元数据串行。
 local function bytes_to_hex(data)
     local parts = {}
 
@@ -44,7 +62,7 @@ local function bytes_to_hex(data)
     return table.concat(parts)
 end
 
--- 采样多个文件生成只包含安全字符的特征。
+-- 仅在初始化时流式校验全文，同长度且位于文件中间的编辑也能检出。
 local function generate_files_signature(paths)
     local parts = {}
 
@@ -52,27 +70,25 @@ local function generate_files_signature(paths)
         local file, close = wanxiang.load_file_with_fallback(path, "rb")
 
         if file then
-            local size = file:seek("end") or 0
-            local head, middle, tail = "", "", ""
-
-            if size > 0 then
-                file:seek("set", 0)
-                head = file:read(64) or ""
-
-                file:seek("set", math.floor(size / 2))
-                middle = file:read(64) or ""
-
-                file:seek("set", math.max(0, size - 64))
-                tail = file:read(64) or ""
+            local size, hash1, hash2 = 0, 5381, 0
+            while true do
+                local chunk = file:read(8192)
+                if not chunk then break end
+                size = size + #chunk
+                for i = 1, #chunk do
+                    local byte = chunk:byte(i)
+                    hash1 = (hash1 * 33 + byte) % 4294967296
+                    hash2 = (hash2 * 65599 + byte) % 4294967296
+                end
             end
 
             close()
             parts[#parts + 1] = table.concat({
-                tostring(size),
-                bytes_to_hex(head),
-                bytes_to_hex(middle),
-                bytes_to_hex(tail),
+                "full-v1", bytes_to_hex(path), tostring(size),
+                string.format("%08x%08x", hash1, hash2),
             }, ":")
+        else
+            parts[#parts + 1] = bytes_to_hex(path) .. ":missing"
         end
     end
 
@@ -85,36 +101,24 @@ local function is_disabled(value)
     return tip_type and tips.disabled_types[tip_type] == true or false
 end
 
--- 从文件加载提示；相同 key 由后出现的 value 覆盖。
+-- 从文件逐行加载提示；数据文件应自行保证 key 唯一。
 local function load_data_from_files(files)
-    local written = {}
-
     for _, file_path in ipairs(files) do
         local file, close = wanxiang.load_file_with_fallback(file_path, "r")
 
         if file then
-            for line in file:lines() do
-                line = line:gsub("\r$", "")
+            for raw_line in file:lines() do
+                local line = raw_line:gsub("\r$", "")
                 local value, key = line:match("^([^\t]+)\t([^\t]+)$")
 
                 if key and value and not is_disabled(value) then
                     local raw_key = key .. RECORD_SEPARATOR .. value
-                    local old_raw_key = written[key]
 
-                    if raw_key ~= old_raw_key then
-                        if old_raw_key and not tips_db:erase(old_raw_key) then
-                            close()
-                            return false
-                        end
-
-                        if not tips_db:update(
-                            raw_key, DEFAULT_RECORD_TAIL
-                        ) then
-                            close()
-                            return false
-                        end
-
-                        written[key] = raw_key
+                    if not tips_db:update(
+                        raw_key, DEFAULT_RECORD_TAIL
+                    ) then
+                        close()
+                        return false
                     end
                 end
             end
@@ -128,6 +132,7 @@ end
 
 -- 关闭数据库并恢复待初始化状态。
 local function close_database()
+    clear_tip_cache()
     local db = tips_db
     tips_db = nil
 
@@ -144,6 +149,7 @@ local function init_database(config)
     if tips.status == "done" then return true end
     if tips.status == "initialing" then return false end
     tips.status = "initialing"
+    clear_tip_cache()
 
     local db_name = config:get_string("super_tips/db_name")
     if not db_name or db_name == "" then db_name = "tips" end
@@ -242,15 +248,21 @@ local function init_database(config)
         return false
     end
 
+    collectgarbage("collect")
     tips.status = "done"
     return true
 end
 
 -- 按逻辑 key 查询并解析提示 value。
 local function fetch_tip(key)
+    local cached = tip_cache[key]
+    if cached ~= nil then return cached or nil end
     local prefix = key .. RECORD_SEPARATOR
     local accessor = tips_db:query(prefix)
-    if not accessor then return nil end
+    if not accessor then
+        cache_tip(key, nil)
+        return nil
+    end
 
     local value
 
@@ -261,7 +273,9 @@ local function fetch_tip(key)
     end
 
     accessor = nil
-    return value ~= "" and value or nil
+    value = value ~= "" and value or nil
+    cache_tip(key, value)
+    return value
 end
 
 -- 从编码或候选文本中查询提示。

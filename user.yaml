@@ -1,11 +1,13 @@
 var:
-  last_build_time: 1786257959
+  last_build_time: 1792720306
   option:
     chinese_english: false
     emoji: true
     prediction: false
+    std_t: true
     super_tips: false
   previously_selected_schema: wanxiang_pro
   schema_access_time:
-    wanxiang_english: 1783679346
-    wanxiang_pro: 1783679347
+    wanxiang_english: 1792236636
+    wanxiang_pro: 1792237410
+    zamo_english: 1792237407

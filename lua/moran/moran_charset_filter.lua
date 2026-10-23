@@ -1,8 +1,10 @@
 local moran = require("moran")
+-- 2026-10-17: 非汉字先放行，字符缓存逐项 FIFO 淘汰。
 local Top = {}
 
 local MEMO = {}
-local MEMO_COUNT = 0
+local MEMO_QUEUE = {}
+local MEMO_HEAD = 1
 
 local kNoExclude = 0
 local kCharTrad = 1 -- t | f
@@ -73,17 +75,6 @@ function Top.CodepointInCharset(env, codepoint)
    if env.memo[codepoint] ~= nil then
       return env.memo[codepoint]
    end
-   if MEMO_COUNT >= env.memo_cap then
-      local cnt = 0
-      for k, _ in pairs(env.memo) do
-         env.memo[k] = nil
-         MEMO_COUNT = MEMO_COUNT - 1
-         cnt = cnt + 1
-         if cnt >= env.memo_cap / 2 then
-            break
-         end
-      end
-   end
    if not moran.unicode_code_point_is_chinese(codepoint) then
       return kCharBoth
    end
@@ -97,8 +88,14 @@ function Top.CodepointInCharset(env, codepoint)
    elseif res == 'j' then
       res = kCharSimp
    end
+   if #MEMO_QUEUE < env.memo_cap then
+      MEMO_QUEUE[#MEMO_QUEUE + 1] = codepoint
+   else
+      env.memo[MEMO_QUEUE[MEMO_HEAD]] = nil
+      MEMO_QUEUE[MEMO_HEAD] = codepoint
+      MEMO_HEAD = MEMO_HEAD % env.memo_cap + 1
+   end
    env.memo[codepoint] = res
-   MEMO_COUNT = MEMO_COUNT + 1
    return res
 end
 
