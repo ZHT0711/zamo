@@ -4,7 +4,7 @@ __build_info:
     default: 1785672435
     default.custom: 1792241518
     moran_charset.custom: 0
-    moran_charset.schema: 1782016857
+    moran_charset.schema: 1782016858
 menu:
   alternative_select_labels:
     - 1

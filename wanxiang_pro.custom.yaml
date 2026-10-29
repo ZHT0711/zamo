@@ -1,6 +1,9 @@
 # 主方案个人设置：修改后重新部署。完整修改入口见 README.md。
 # 这里的值与整理前一致；优先在此添加补丁，避免到大文件中查找。
 patch:
+  # 英文查询与 moran 造词使用相同的语言标识；旧 en 词库已迁移。
+  english/user_dict: zamo_english
+
   # 当前为小鹤双拼 + 直接辅助。其他可选名称见 wanxiang_algebra.yaml。
   speller/algebra:
     __patch:

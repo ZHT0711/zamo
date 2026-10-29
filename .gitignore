@@ -7,3 +7,5 @@
 *.log
 *.tmp
 /benchmark_logs/
+__pycache__/
+*.pyc

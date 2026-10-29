@@ -3,9 +3,9 @@ __build_info:
   timestamps:
     default: 1785672436
     default.custom: 1792241518
-    wanxiang_algebra: 1772893142
+    wanxiang_algebra: 1772893141
     wanxiang_algebra.custom: 0
-    wanxiang_pro.custom: 1792320067
+    wanxiang_pro.custom: 1793279970
     wanxiang_pro.schema: 1792320144
     wanxiang_symbols: 1770907726
     wanxiang_symbols.custom: 0
@@ -121,7 +121,7 @@ english:
   enable_sentence: false
   initial_quality: 2.1
   tag: english
-  user_dict: en
+  user_dict: zamo_english
 english_add_word:
   dictionary: zamo_english
   enable_user_dict: false

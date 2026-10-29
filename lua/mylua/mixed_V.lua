@@ -5,7 +5,7 @@
 --   简易计算器   ChaosAlphard   rime-shuangpin-fuzhuma/pull/41
 --   金额大写     moran_number   ksqsf       v0.1.1
 --   公历转农历   moran_shijian  98wubi Group, Project Moran
--- Version: 0.2.3
+-- Version: 0.2.4
 
 -- 主要功能：
 -- 1. V 前缀：金额大写、简易计算器、公历转农历（yyyy.mm.dd / mm.dd/）、当天信息
@@ -14,6 +14,9 @@
 -- 4. Vsj: 当前时间
 
 -- ChangeLog:
+--
+-- 0.2.4: 日期候选新增 yyyy-mm-dd（横线分隔）格式：V 空输入、公历日期转换、rq 偏移
+--        三处输出同步增加。
 --
 -- 0.2.3: 农历换算改为整数日序 + 结构化年表（惰性解析并缓存）；删除 Dec2bin / system /
 --        Analyze / IsLeap / leaveDate / diffDate，消除字符串位图解析的越界隐患。
@@ -459,7 +462,7 @@ local function is_valid_date(y, m, d)
     return d <= month_days(y, m)
 end
 
--- 输出一个公历日期的标准五项（不含时间戳）
+-- 输出一个公历日期的标准候选（不含时间戳）
 local function yield_date_group(seg, input, y, m, d)
     if #y == 2 then y = "20" .. y end
     if #m == 1 then m = "0" .. m end
@@ -474,6 +477,7 @@ local function yield_date_group(seg, input, y, m, d)
         return
     end
     yield_cand(seg, input, y .. "/" .. m .. "/" .. d, "")
+    yield_cand(seg, input, y .. "-" .. m .. "-" .. d, "")
     yield_cand(seg, input, y .. m .. d, "")
     -- Windows 的 mktime 不支持 1970 年之前的日期，os.time 会直接抛错并作废整轮候选；
     -- 故只对 1971 年及以后计算星期，1970 及以前跳过星期候选（留一年余量以避开时区边界）。
@@ -512,6 +516,7 @@ function M.func(input, seg, env)
     if express == "" then
         local lunar = solarToLunar(os.date('%Y%m%d', current_time))
         yield_cand(seg, input, os.date('%Y/%m/%d', current_time), "")
+        yield_cand(seg, input, os.date('%Y-%m-%d', current_time), "")
         yield_cand(seg, input, os.date('%Y%m%d', current_time), "")
         yield_cand(seg, input, string.format('%d', current_time), "")
         yield_cand(seg, input, lunar:match("%) (.+)") or lunar, "")
@@ -558,6 +563,7 @@ function M.func(input, seg, env)
             return
         end
         yield_cand(seg, input, target_date, "")
+        yield_cand(seg, input, (target_date:gsub("/", "-")), "")
         yield_cand(seg, input, target_compact, "")
         yield_weekday(seg, input, target_time)
         local lunar_full = solarToLunar(target_compact)

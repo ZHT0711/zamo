@@ -136,6 +136,10 @@ function top.init(env)
     -- disable_sentence_candidates_upto
     env.disable_sentence_candidates_upto = env.engine.schema.config:get_int("moran/disable_sentence_candidates_upto") or 0
 
+    -- 候選總數上限：限制 smart 迭代器的 yield 總量，避免長句時全量遍歷。
+    -- 可在 schema 中用 moran/max_candidates 配置，默認 150（約 30 頁）。
+    env.max_candidates = env.engine.schema.config:get_int("moran/max_candidates") or 150
+
     -- output 狀態
     env.output_i = 0
     env.output_injected_secondary = {}
@@ -319,6 +323,7 @@ function top.func(input, seg, env)
         if not ijrq_enabled then
             -- 不啓用出簡讓全時
             for cand in smart_iter do
+                if env.output_i >= env.max_candidates then break end
                 top.output(env, cand)
             end
         else
@@ -369,6 +374,7 @@ function top.func(input, seg, env)
                 top.output(env, immediate_set[i])
             end
             for cand in smart_iter do
+                if env.output_i >= env.max_candidates then break end
                 top.output(env, cand)
             end
         end
