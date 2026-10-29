@@ -1,25 +1,14 @@
 __build_info:
-  rime_version: 1.13.1
+  rime_version: 1.17.0
   timestamps:
-    default: 1772546190
-    default.custom: 1782027540
-    wanxiang_algebra: 1772893140
+    default: 1785672436
+    default.custom: 1792241518
+    wanxiang_algebra: 1772893142
     wanxiang_algebra.custom: 0
-    wanxiang_pro.custom: 0
-    wanxiang_pro.schema: 1786257935
+    wanxiang_pro.custom: 1792241518
+    wanxiang_pro.schema: 1792242744
     wanxiang_symbols: 1770907726
     wanxiang_symbols.custom: 0
-add_user_dict:
-  dictionary: wanxiang_pro
-  enable_auto_phrase: false
-  enable_completion: true
-  enable_user_dict: true
-  initial_quality: "-1"
-  prefix: "``"
-  spelling_hints: 50
-  tag: add_user_dict
-  tips: "〔开始造词〕"
-  user_dict: zc
 aux_code:
   show_aux_notice: trigger
   storage: db
@@ -71,27 +60,27 @@ emoji:
   option_name: emoji
 engine:
   filters:
-    - "lua_filter@*wanxiang.user_predict*F"
     - "lua_filter@*moran.moran_charset_filter"
     - "lua_filter@*moran.moran_pin*pin_filter"
     - "lua_filter@*moran.moran_reorder_filter"
     - "lua_filter@*moran.moran_ijrq_filter"
-    - "lua_filter@*super_comment_preedit"
+    - "lua_filter@*mylua.super_comment_preedit"
     - "lua_filter@*moran.moran_hint_filter"
-    - "lua_filter@*mylua.add_words"
+    - "lua_filter@*moran.moran_english*add_word_filter"
     - "simplifier@emoji"
     - "simplifier@traditionalize"
-    - "simplifier@std_hk"
-    - "simplifier@std_tw"
+    - "simplifier@std_t2s"
+    - "simplifier@std_t2tw"
+    - "simplifier@std_t2hk"
     - "simplifier@chinese_english"
+    - "simplifier@pinyinhint"
     - "lua_filter@*wanxiang.super_filter"
-    - "lua_filter@*aux_code"
-    - "lua_filter@*wanxiang.super_lookup"
+    - "lua_filter@*mylua.aux_code"
+    - "lua_filter@*mylua.super_lookup"
     - uniquifier
   processors:
-    - "lua_processor@*wanxiang.super_tips"
     - "lua_processor@*moran.moran_pin*pin_processor"
-    - "lua_processor@*wanxiang.user_predict*P"
+    - "lua_processor@*wanxiang.super_tips"
     - "lua_processor@*wanxiang.super_processor"
     - "lua_processor@*moran.moran_processor"
     - "lua_processor@*wanxiang.force_upper_aux"
@@ -109,26 +98,32 @@ engine:
   segmentors:
     - ascii_segmentor
     - matcher
-    - "lua_segmentor@*mylua.paired_punct"
     - abc_segmentor
     - "affix_segmentor@wanxiang_reverse"
-    - "affix_segmentor@add_user_dict"
     - punct_segmentor
     - fallback_segmentor
   translators:
-    - "lua_translator@*wanxiang.user_predict*T"
     - punct_translator
-    - "lua_translator@*mylua.pseudo_moran@with_reorder"
-    - "lua_translator@*wanxiang.shijian"
-    - "lua_translator@*wanxiang.unicode"
-    - "lua_translator@*wanxiang.number_translator"
-    - "lua_translator@*wanxiang.super_calculator"
-    - "table_translator@custom_phrase"
-    - "table_translator@wanxiang_english"
     - "table_translator@wanxiang_mixedcode"
+    - "lua_translator@*moran.moran_english*translator"
+    - "lua_translator@*mylua.pseudo_moran@with_reorder"
+    - "lua_translator@*mylua.mixed_V"
+    - "lua_translator@*wanxiang.unicode"
+    - "table_translator@custom_phrase"
     - "lua_translator@*moran.moran_pin*panacea_translator"
     - "reverse_lookup_translator@wanxiang_reverse"
-    - "script_translator@add_user_dict"
+english:
+  comment_format:
+    - "xform/^~.+$//"
+  dictionary: zamo_english
+  enable_completion: true
+  enable_sentence: false
+  initial_quality: 2.1
+  tag: english
+  user_dict: en
+english_add_word:
+  dictionary: zamo_english
+  enable_user_dict: false
 fixed:
   dictionary: moran_fixed_simp
   enable_charset_filter: false
@@ -209,9 +204,7 @@ key_binder:
     - {accept: "Control+u", toggle: unicode_comment, when: composing}
     - {accept: Tab, send: "Control+Right", when: has_menu}
     - {accept: Tab, send: "Control+Right", when: composing}
-    - {accept: "Alt+z", send_sequence: "{Home}{`}{`}{End}", when: composing}
     - {accept: ":", match: "[a-z]{1,4}", send_sequence: "/1"}
-    - {accept: "`", match: "^.*`$", send_sequence: "{BackSpace}{Home}{`}{`}{End}"}
     - {accept: minus, send: Page_Up, when: has_menu}
     - {accept: equal, send: Page_Down, when: has_menu}
     - {accept: "Alt+Left", send: "Shift+Left", when: composing}
@@ -251,6 +244,8 @@ menu:
   page_size: 6
 moran:
   enable_quick_code_hint: true
+  english:
+    add_word: {enable: true, indicator: "「Add words」", trigger: "``"}
   ijrq:
     defer: 2
     enable: true
@@ -266,6 +261,13 @@ moran:
     panacea: {freestyle: true, infix: "//", prompt: "〔首选·加词〕"}
   quick_code_hint_skip_chars: false
   quick_code_indicator: "⚡"
+  third_candidate_key: "Shift+Shift_L"
+navigator:
+  bindings:
+    Left: left_by_char_no_loop
+    Right: right_by_char_no_loop
+    "Shift+Left": left_by_syllable
+    "Shift+Right": right_by_syllable
 paired_punct:
   defer:
     - "，"
@@ -277,7 +279,99 @@ paired_punct:
     k: ["（", "）"]
     s: ["「", "」"]
     u: ["《", "》"]
-  pattern: "^([asduk])\\"
+  pattern: "^([asduk])|"
+paired_symbols:
+  symkey:
+    a: "[]"
+    aa: "〚〛"
+    an: "&&"
+    at: "@@"
+    b: "【】"
+    bb: "〘〙"
+    br: "|  "
+    bs: "\\\\"
+    c: "❲❳"
+    cb: "```|```"
+    cc: "〚〛"
+    cl: "::"
+    cm: "<!--|-->"
+    cr: "^^"
+    d: "〔〕"
+    dd: "❨❩"
+    dl: "$$"
+    dy: "''"
+    e: "⟮⟯"
+    ee: "❪❫"
+    eq: "==|=="
+    ex: "!!"
+    f: "⟦⟧"
+    fa: "⦋⦌"
+    ff: "❬❭"
+    fy: "``"
+    g: "「」"
+    gg: "⦉⦊"
+    h: "# |"
+    hh: "## |"
+    hhh: "### |"
+    hhhh: "#### |"
+    i: "『』"
+    ii: "⦍⦎"
+    im: "![|](img)"
+    it: "__|__"
+    j: "<>"
+    jc: "**|**"
+    jj: "⦏⦐"
+    k: "《》"
+    kk: "⦑⦒"
+    l: "〈〉"
+    lk: "[|](url)"
+    ll: "❮❯"
+    ln: "`|`"
+    m: "‹›"
+    md: "**|**"
+    mi: "--"
+    mm: "⌈⌉"
+    n: "«»"
+    nn: "⌊⌋"
+    o: "⦅⦆"
+    ol: "1. |"
+    oo: "⦗⦘"
+    p: "⦇⦈"
+    pc: "%%"
+    pl: "++"
+    pp: "⦙⦚"
+    q: "()"
+    qq: "⟬⟭"
+    qt: "> |"
+    qu: "??"
+    r: "|儿"
+    rr: "❴❵"
+    s: "［］"
+    sb: sb
+    sc: ";;"
+    sl: "//"
+    sp: "\\|"
+    ss: "⌜⌝"
+    st: "~~|~~"
+    sy: "\"\""
+    t: "⟨⟩"
+    tt: "⌞⌟"
+    u: "〈〉"
+    ul: "- |"
+    uu: "⸢⸣"
+    v: "〖〗"
+    vv: "⸤⸥"
+    w: "（）"
+    ww: "﹁﹂"
+    x: "｛｝"
+    xx: "﹃﹄"
+    y: "⟪⟫"
+    yy: "⌠⌡"
+    z: "{}"
+    zd: "‘’"
+    zs: "“”"
+    zz: "⟅⟆"
+  trigger: "\\"
 pinyinhint:
   opencc_config: moran_pinyinhint.json
   option_name: pinyinhint
@@ -781,10 +875,10 @@ quick_symbol_text:
     a: "！"
     b: "%"
     c: "！”"
-    d: "、"
+    d: "の"
     e: "（"
     f: "“"
-    g: "”"
+    g: "https://ghfast.top/"
     h: "‘"
     i: "』"
     j: "’"
@@ -807,8 +901,10 @@ quick_symbol_text:
 recognizer:
   import_preset: default
   patterns:
-    add_user_dict: "^``[A-Za-z/`']*$"
     calculator: "^V.*$"
+    date_offset: "^rq[+-][0-9]*$"
+    english: "(^[A-Za-z]{4}[A-Za-z]*)|(^[A-Z][A-Za-z]*)|(^[a-z][A-Z][a-zA-Z]*)|(^[a-z][a-z][A-Z][a-zA-Z]*)"
+    mixed_V: "^V.*$"
     number: "^R[0-9]+[.]?[0-9]*"
     nyr1: "^N19?[0-9]?[0-9]?[0-1]?[0-9]?[0-9]?[0-9]?"
     nyr2: "^N20?[0-9]?[0-9]?[0-1]?[0-9]?[0-9]?[0-9]?"
@@ -826,10 +922,11 @@ recognizer:
 schema:
   author:
     - amzxyz
+    - sk
   dependencies:
     - wanxiang_mixedcode
     - wanxiang_reverse
-    - wanxiang_english
+    - zamo_english
     - wanxiang_chaifen
     - moran_fixed
     - moran_charset
@@ -940,22 +1037,44 @@ speller:
     - "derive|^(..)([a-z])([a-z])(\\d?)$|$1\\u$2$3$4|"
     - "derive|^(..)([a-z])([a-z])(\\d?)$|$1$2\\u$3$4|"
     - "derive|^(..)([a-z])([a-z])(\\d?)$|$1\\u$2\\u$3$4|"
-  alphabet: "zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA1234567890`;/\\@"
+  alphabet: "zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA1234567890`;/\\@|"
+  auto_select: true
+  auto_select_pattern: "^(\\w+)/"
   delimiter: " '"
   initials: "zyxwvutsrqponmlkjihgfedcbaZYXWVUTSRQPONMLKJIHGFEDCBA/"
   visual_delimiter: " "
-std_hk:
+std_t2dzing:
+  opencc_config: moran_t2dzing.json
+  option_name: std_t2dzing
+  tags:
+    - abc
+    - number
+  tips: all
+std_t2hk:
   opencc_config: t2hk.json
-  option_name: std_hk
+  option_name: std_t2hk
   tags:
     - abc
+    - number
+std_t2jp:
+  opencc_config: t2jp.json
+  option_name: std_t2jp
+  tags:
+    - abc
+    - number
   tips: all
-std_tw:
+std_t2s:
+  opencc_config: moran_t2s.json
+  option_name: std_t2s
+  tags:
+    - abc
+    - number
+std_t2tw:
   opencc_config: t2tw.json
-  option_name: std_tw
+  option_name: std_t2tw
   tags:
     - abc
-  tips: all
+    - number
 super_comment:
   candidate_length: 2
   corrector_type: "〔comment〕"
@@ -975,6 +1094,7 @@ super_tips:
     - "禁用类型B"
   files:
     - "lua/data/tips_show.txt"
+    - "lua/data/tips_user.txt"
   tips_key: comma
 switches:
   - name: ascii_mode
@@ -984,13 +1104,16 @@ switches:
   - name: full_shape
     states: ["半角", "全角"]
   - name: emoji
+    reset: 1
     states: ["🙃", "😄"]
   - name: chinese_english
     states: ["翻译关", "翻译开"]
   - name: chaifen_switch
     states: ["拆分关", "拆分开"]
   - name: extended_charset
-    states: ["通用", "增廣"]
+    states: ["通用", "增广"]
+  - name: pinyinhint
+    states: ["🔇", "🔊"]
   - name: super_tips
     reset: 0
     states: ["提示关", "提示开"]
@@ -1002,9 +1125,8 @@ switches:
     states: ["注释关", "辅助开", "读音开"]
   - name: traditionalization
     states: ["简体", "繁體"]
-  - options: [std_opencc, std_tw, std_hk]
-    reset: 0
-    states: ["通", "臺", "港"]
+  - options: [std_t, std_t2s, std_t2tw, std_t2hk, std_t2jp, std_t2dzing]
+    states: ["通", "简", "台", "港", "日", "寍"]
   - name: inflexible
     states: ["動詞", "固詞"]
   - name: char_priority
@@ -1016,9 +1138,6 @@ time_formats:
   - "H时M分S秒"
   - "AI:M"
   - "I:M P"
-tips:
-  disabled_types:
-    []
 tone_preedit:
   0: "⁴"
   7: "¹"
@@ -1046,19 +1165,6 @@ translator:
   max_word_length: 7
   prism: zaran
   spelling_hints: 50
-user_dict_set:
-  contextual_suggestions: false
-  core_word_length: 4
-  dictionary: wanxiang_pro
-  enable_completion: false
-  enable_sentence: false
-  enable_user_dict: true
-  initial_quality: 2.5
-  max_homographs: 8
-  max_homophones: 8
-  max_word_length: 7
-  spelling_hints: 50
-  user_dict: zc
 user_predict:
   activation_days: 7
   context_timeout: 5000
@@ -1079,16 +1185,6 @@ user_predict:
   max_memory_branches: 15
   max_predictions: 3
   mobile_predict_style: post
-wanxiang_english:
-  comment_format:
-    - "xform/^~.+$//"
-  dictionary: wanxiang_english
-  enable_completion: true
-  enable_sentence: false
-  english_spacing: smart
-  initial_quality: 2.1
-  spacing_timeout: 5
-  user_dict: en
 wanxiang_lookup:
   data_source:
     - aux
@@ -1099,6 +1195,7 @@ wanxiang_lookup:
     - wanxiang_reverse
   tags:
     - abc
+    - add_user_dict
 wanxiang_mixedcode:
   comment_format:
     - "xform/^~.+$//"
@@ -1109,6 +1206,7 @@ wanxiang_mixedcode:
   initial_quality: 2
 wanxiang_reverse:
   dictionary: wanxiang_reverse
+  enable_completion: true
   prefix: "`"
   tag: wanxiang_reverse
   tips: "〔反查：拆分|笔画〕"
