@@ -7,60 +7,45 @@ schema:
     - 方案製作：ksqsf
   description: |
     四碼唯一自動上屏、五碼頂屏的碼表式輸入方式。
-
+  dependencies:
+    - moran.chars
+    
 switches:
   - name: ascii_mode
     states: [ 中文, 西文 ]
   - name: full_shape
     states: [ 半角, 全角 ]
-  - name: simplification
-    states: [ 漢字, 汉字 ]
   - name: ascii_punct
     states: [ 。，, ．， ]
-  - name: emoji
-    states: [ 🈚, 🈶 ]
-  - name: chaifen
-    states: [ 不拆, 扌斥 ]
-  - name: unicode_comment
-    states: [ U關, U開 ]
-  - options: [ std_opencc,  std_tw, std_hk, std_dzing ]
-    reset: 0
-    states: [ 通, 臺, 港, 寍 ]
 
 engine:
   processors:
-    - lua_processor@*moran_pin*pin_processor
-    - ascii_composer
-    - recognizer
-    - key_binder
-    - speller
-    - punctuator
-    - selector
-    - navigator
-    - express_editor
+    # - lua_processor@*moran_pin*pin_processor
+    - ascii_composer                      # 按键是否启动(Ctrl键、CapsLock键、Shift键等)
+    - recognizer                          # 处理符合特定规则的输入码，如网址、反查
+    - key_binder                          # 快捷键
+    - speller                             # 拼写设定
+    - punctuator                          # 标点符号
+    - selector                            # 选字处理器，处理数字选字键〔可以换成别的哦〕、上、下候选定位、换页
+    - navigator                           # 处理输入栏内的光标移动
+    - express_editor                      #编辑器，处理空格、回车上屏、回退键
   segmentors:
-    - ascii_segmentor
-    - matcher
-    - abc_segmentor
-    - punct_segmentor
-    - fallback_segmentor
+    - ascii_segmentor                     # 标识英文段落〔譬如在英文模式下〕字母直接上屛
+    - matcher                             # 配合 recognizer 标识符合特定规则的段落，如网址、反查等，加上特定 tag
+    - affix_segmentor@zkci                # 造词 tag
+    - abc_segmentor                       # 标识常规的文字段落，加上 abc 这个 tag
+    - punct_segmentor                     # 标识符号段落〔键入标点符号用〕加上 punct 这个 tag
+    - fallback_segmentor                  # 标识其他未标识段落，必须放在最后帮助tag模式切换后回退重新处理
   translators:
-    - punct_translator
-    - reverse_lookup_translator
-    - table_translator@custom_phrase       # 自定義短語
+    - punct_translator                    # 配合 punct_segmentor 转换标点符号
+    # - reverse_lookup_translator@reverse_zrlf    # 两分
+    # - reverse_lookup_translator
+    # - table_translator@custom_phrase       # 自定義短語
     - table_translator
     - table_translator@fixed
-    - lua_translator@*moran_pin*panacea_translator
+    - table_translator@zkci               # 造词
   filters:
-    - lua_filter@*moran_pin*pin_filter
-    - simplifier@chaifen
-    - simplifier@std_hk
-    - simplifier@std_tw
-    - simplifier@std_dzing
-    - simplifier
-    - simplifier@emoji
- #   - lua_filter@*moran_quick_code_hint  # 簡碼提示功能，詳見文件末
-    - uniquifier
+    - uniquifier                          # 去重
 
 speller:
   alphabet: "abcdefghijklmnopqrstuvwxyz=;" # 「置頂」功能：需要加上/
@@ -70,105 +55,104 @@ speller:
   auto_select_pattern: ^;(\w|;)+|^\w{3}\w+ # 「置頂」功能：建議取消四碼唯一上屏模式，即改成auto_select_pattern: ^;(\w|;)+
   auto_clear: max_length # manual | auto | max_length
   algebra:
-    __patch:
-      - moran:/algebra/user_force_top?
-      - moran:/algebra/user_force_bottom?
+    # __patch:
+    #   - moran:/algebra/user_force_top?
+    #   - moran:/algebra/user_force_bottom?
 
+# 主翻译器
 translator:
-  dictionary: moran_fixed_simp
-  db_class: tabledb
-  enable_charset_filter: false
-  enable_sentence: false
-  enable_completion: false
-  enable_user_dict: false
-  initial_quality: 100000
+  dictionary: moran_fixed_simp        # 挂载词库 
+  db_class: tabledb                   # 只读数据库，无法动态调频；设为 tabledb 可以动态调频
+  enable_charset_filter: false        # 是否开启字符集过滤
+  enable_sentence: false              # 是否开启自动造句
+  enable_completion: false            # 提前显示尚未输入完整码的字〔仅 table_translator 有效〕
+  enable_user_dict: false             # 是否开启用户词典
+  initial_quality: 100000             # 初始权重
 
+# 自造词词库 权重比默认的低
 fixed:
-  dictionary: moran_fixed_simp
-  db_class: tabledb
-  enable_charset_filter: false
-  enable_sentence: false
-  enable_completion: false
-  enable_user_dict: true
-  enable_encoder: true
+  dictionary: moran_fixed_simp        # 挂载词库 
+  db_class: tabledb                   # 只读数据库，无法动态调频；设为 tabledb 可以动态调频
+  enable_charset_filter: false        # 是否开启字符集过滤
+  enable_sentence: false              #  是否开启自动造句
+  enable_completion: false            # 提前显示尚未输入完整码的字〔仅 table_translator 有效〕
+  enable_user_dict: true              # 是否开启用户词典
+  enable_encoder: true                # 是否开启自动造词〔仅table_translator有效〕
   encode_commit_history: false   # 是否開啓自動造詞
-  initial_quality: 1000
+  initial_quality: 1000             # 初始权重
 
 
-
-
-
-
-simplifier:
-  option_name: simplification
-  opencc_config: moran_t2s.json
-
-std_hk:
-  opencc_config: t2hk.json
-  option_name: std_hk
-  #tips: all
-
-std_tw:
-  opencc_config: t2tw.json
-  option_name: std_tw
-  #tips: all
-
-std_dzing:
-  opencc_config: moran_dzing.json
-  option_name: std_dzing
-  tips: all
-
-emoji:
-  opencc_config: moran_emoji.json
-  option_name: emoji
-  tips: all
-
-chaifen:
-  option_name: chaifen
-  opencc_config: moran_chaifen.json
-  tips: char
-  show_in_comment: true
-  comment_format:
-    - "xform/-/ /"
-    - "xform/〕〔/｜/"
-
-reverse_zrlf:
-  tag: reverse_zrlf
-  dictionary: zrlf
-  prefix: olf
-  enable_completion: true
-  tips: 〔兩分〕
-  comment_format:
-    - xform/(\w\w);(\w\w)/$1[$2]/
-  preedit_format:
-    - xform/^olf//
-
-reverse_lookup:
-  dictionary: moran.chars
+zkci:           # 造詞反查
+  tag: zkci
+  db_class: tabledb
+  dictionary: moran_fixed_simp
   enable_user_dict: false
-  tips: 〔通配〕
+  enable_charset_filter: false
+  enable_completion: false
+  enable_sentence: true
+  enable_encoder: false
+  max_phrase_length: 4
+  prefix: "'"
+  tips: 〔造詞〕
+  initial_quality: 10
+
+
+# reverse_lookup:
+#   dictionary: moran.chars     # 挂载词库 
+#   enable_user_dict: false     # 是否开启用户词典〔用户词典记录动态字词频、用户词〕
+#   tips: 〔通配〕               # 翻译器的输入前提示符
 
 recognizer:
   import_preset: default
   patterns:
-    reverse_lookup: "(^(`[a-z`]+))|(^([a-z]{2}(`[a-z`]?|[a-z`]`|[a-z][a-z]`)))"
-    reverse_zrlf: "^olf[A-Za-z]*$"
+    # reverse_lookup: "(^(`[a-z`]+))|(^([a-z]{2}(`[a-z`]?|[a-z`]`|[a-z][a-z]`)))"
+    # reverse_zrlf: "^olf[A-Za-z]*$"
     zkci: "^[a-z]*'[a-z']*$"
     # 「置頂」功能：使用加置頂詞功能需要取消下面的註釋
     # panacea: "^[a-z]*/{1,2}[a-z']*$"
-    punct: '^/([0-9]0?|[A-Za-z]+)$'
+    # punct: '^/([0-9]0?|[A-Za-z]+)$'
 
-punctuator:
-  import_preset: symbols
+# punctuator:
+#   import_preset: symbols
 
 key_binder:
   import_preset: default
-  custom_bindings:
-    __append:
-      # 在這裏添加只在本方案中生效的按鍵綁定
-      # 取消下行註釋，按住 = 不放可以連續上屏
-      # - { when: has_menu, accept: '=', send: 4 }  # 4 對應於 history_translator 的輸出位置，修改 symbols.yaml 後需要作相應修改
-
+  # custom_bindings:
+  #   __append:
+  #     # 在這裏添加只在本方案中生效的按鍵綁定
+  #     # 取消下行註釋，按住 = 不放可以連續上屏
+  #     # - { when: has_menu, accept: '=', send: 4 }  # 4 對應於 history_translator 的輸出位置，修改 symbols.yaml 後需要作相應修改
+  bindings:
+    # 一些功能的開關鍵
+    # - moran:/key_bindings/moran_switches
+    # - { when: has_menu, accept: "Control+s", toggle: traditionalization }
+    # - { when: has_menu, accept: "Control+u", toggle: unicode_comment }
+    # - { when: has_menu, accept: "Control+q", toggle: emoji }
+    # - { when: composing, accept: "Control+x", toggle: extended_charset }
+    # - { when: has_menu, accept: "Control+Shift+0", toggle: std_opencc }
+    # - { when: has_menu, accept: "Control+i", toggle: chaifen }
+    # - { when: has_menu, accept: "Control+period", toggle: pinyinhint }
+    # 分號用於次選
+    # - moran:/key_bindings/moran_semicolon_for_2
+    - { when: has_menu, accept: semicolon, send: "2" }
+    # 支持小鍵盤數字鍵和回車鍵
+    # - moran:/key_bindings/moran_keypad
+    - { when: composing, accept: KP_Enter, send: Return }
+    - { when: composing, accept: KP_0, send: '0' }
+    - { when: composing, accept: KP_1, send: '1' }
+    - { when: composing, accept: KP_2, send: '2' }
+    - { when: composing, accept: KP_3, send: '3' }
+    - { when: composing, accept: KP_4, send: '4' }
+    - { when: composing, accept: KP_5, send: '5' }
+    - { when: composing, accept: KP_6, send: '6' }
+    - { when: composing, accept: KP_7, send: '7' }
+    - { when: composing, accept: KP_8, send: '8' }
+    - { when: composing, accept: KP_9, send: '9' }
+    # __patch:
+    #   - :/key_binder/custom_bindings?
+    #   - moran:/key_bindings/moran_switches
+    #   - moran:/key_bindings/moran_semicolon_for_2
+    #   - moran:/key_bindings/moran_keypad
 
 # 默認不開啓語言模型
 # 在 moran_fixed.custom.yaml 中輸入如下內容以開啓

@@ -1,0 +1,9 @@
+# 本机编译结果、词库状态和设备信息；不改变已跟踪文件。
+/build/
+**/*.userdb/
+/user.yaml
+/installation.yaml
+*.gram
+*.log
+*.tmp
+/benchmark_logs/

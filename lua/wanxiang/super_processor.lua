@@ -1,6 +1,7 @@
 -- lua/super_processor.lua
 -- @amzxyz
 -- https://github.com/amzxyz/rime_wanxiang
+-- 2026-10-17: 缓存最近的 preedit 解析，重复输入限制放行组合快捷键。
 -- 全能按键处理器：整合 KP小键盘、字母选词、符号快打、超强分词、重复限制、退格限制、声调回退、以词定字
 -- 
 -- 用法: 在 schema.yaml 中 engine/processors 列表添加 - lua_processor@*super_processor
@@ -226,6 +227,9 @@ function M.init(env)
     env.seg_start_idx = nil
     env.seg_N = nil
     env.seg_base = nil
+    env.seg_preedit_cache_key = nil
+    env.repeat_preedit_cache_key = nil
+    env.repeat_preedit_segments = nil
 
     -- [2] 统一 Update Notifier (状态缓存与自动处理)
 
@@ -253,7 +257,10 @@ function M.init(env)
         local seg = ctx.composition:back()
         local cand = seg and seg:get_selected_candidate() or nil
         local pre = cand and cand.preedit or nil
-        env.seg_last_preedit_lens = lens_from_string(pre, env.seg_manual_delim, env.seg_auto_delim)
+        if pre ~= env.seg_preedit_cache_key then
+            env.seg_preedit_cache_key = pre
+            env.seg_last_preedit_lens = lens_from_string(pre, env.seg_manual_delim, env.seg_auto_delim)
+        end
         env.seg_last_input_caret = input
         env.seg_last_caret_pos = ctx.caret_pos
 
@@ -298,6 +305,10 @@ function M.fini(env)
     if env.conn_update then env.conn_update:disconnect(); env.conn_update = nil end
     if env.conn_commit then env.conn_commit:disconnect(); env.conn_commit = nil end
     env.memory = nil
+    env.seg_preedit_cache_key = nil
+    env.seg_last_preedit_lens = nil
+    env.repeat_preedit_cache_key = nil
+    env.repeat_preedit_segments = nil
 end
 
 -- 4. 逻辑分发处理 (Handlers)
@@ -436,11 +447,17 @@ end
 local function handle_limit_repeat(key, env, ctx)
     local kc = key.keycode
     if not (kc >= 0x61 and kc <= 0x7A) then return false end
+    if key:ctrl() or key:alt() or key:super() then return false end
     
     local cand = ctx:get_selected_candidate()
     local preedit = cand and (cand.preedit or cand:get_genuine().preedit) or ""
-    local segs = 1
-    for _ in preedit:gmatch("[%'%s]") do segs = segs + 1 end
+    local segs = env.repeat_preedit_segments
+    if preedit ~= env.repeat_preedit_cache_key or segs == nil then
+        segs = 1
+        for _ in preedit:gmatch("[%'%s]") do segs = segs + 1 end
+        env.repeat_preedit_cache_key = preedit
+        env.repeat_preedit_segments = segs
+    end
 
     local ch = string.char(kc)
     local input = ctx.input or ""

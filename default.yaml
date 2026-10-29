@@ -30,6 +30,16 @@ switcher:
     - s2t
     - s2hk
     - s2tw
+    - std_t
+    - std_t2s
+    - std_t2hk
+    - std_t2tw
+    - std_t2dzing
+    - std_s
+    - std_s2t
+    - std_s2hk
+    - std_s2tw
+    - std_s2dzing
     - emoji
     - full_shape
     - prediction

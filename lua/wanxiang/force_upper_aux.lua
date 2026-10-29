@@ -1,6 +1,7 @@
 -- lua/force_upper_aux.lua
 -- @description: 自动施加辅助码。按一下：全长度N锁定当前；按两下：N-1长度回退历史。按下退格键解除锁定
 -- @author: amzxyz
+-- 2026-10-17: 普通键快速返回、按需切分，并在输入结束时清理辅助历史。
 
 local ForceUpperAux = {}
 local wanxiang = require("wanxiang/wanxiang")
@@ -21,15 +22,32 @@ local function get_utf8_prefix(str, n)
 end
 
 -- 【核心替换】：直接利用底层 spans 顶点切分，抛弃属性传递与正则 (保留第一版逻辑)
+local function get_script_vertices(ctx)
+    local spans = ctx.composition:spans()
+    if not spans then return nil end
+    local count = type(spans.count) == "function" and spans:count() or spans.count
+    if count == 0 then return nil end
+    local vertices = type(spans.vertices) == "function" and spans:vertices() or spans.vertices
+    if not vertices or #vertices < 2 then return nil end
+    return vertices
+end
+
+local function count_script_parts(ctx)
+    local vertices = get_script_vertices(ctx)
+    if not vertices then return 0 end
+    local count, input_length = 0, #ctx.input
+    for i = 1, #vertices - 1 do
+        if vertices[i + 1] > vertices[i] and vertices[i] < input_length then
+            count = count + 1
+        end
+    end
+    return count
+end
+
 local function get_script_text_parts(ctx)
     local parts = {}
-    local spans = ctx.composition:spans()
-    
-    local count = type(spans.count) == "function" and spans:count() or spans.count
-    if not spans or count == 0 then return parts end
-    
-    local vertices = type(spans.vertices) == "function" and spans:vertices() or spans.vertices
-    if not vertices or #vertices < 2 then return parts end
+    local vertices = get_script_vertices(ctx)
+    if not vertices then return parts end
 
     for i = 1, #vertices - 1 do
         local start_byte = vertices[i] + 1 
@@ -40,6 +58,20 @@ local function get_script_text_parts(ctx)
         end
     end
     return parts
+end
+
+local function reset_cycle(env, clear_history)
+    env.press_count = 0
+    env.is_cycling = false
+    env.snapshot_parts = nil
+    env.snapshot_current_full = ""
+    env.original_input = ""
+    if clear_history then env.history_first = {} end
+end
+
+local function is_special_mode(ctx)
+    if wanxiang.s2t_conversion then return wanxiang.s2t_conversion(ctx) end
+    return wanxiang.is_function_mode_active(ctx)
 end
 
 -- 查询辅助码
@@ -72,24 +104,19 @@ function ForceUpperAux.init(env)
     
     env.on_update = function(ctx)
         local raw_in = ctx.input or ""
-        if raw_in == "" or not raw_in:match("^[a-zA-Z0-9]") then
+        if raw_in == "" or not ctx:is_composing() then
+            reset_cycle(env, true)
+            return
+        end
+        if not raw_in:match("^[a-zA-Z0-9]") then
             return
         end
 
-        local is_special_mode = wanxiang.s2t_conversion and wanxiang.s2t_conversion(ctx)
-        if env.is_cycling or wanxiang.is_function_mode_active(ctx) or is_special_mode then 
+        if env.is_cycling or is_special_mode(ctx) then
             return 
         end
-        
-        if not ctx:is_composing() then
-            env.history_first = {}
-            env.press_count = 0
-            env.is_cycling = false
-            return
-        end
-        
-        local parts = get_script_text_parts(ctx)
-        local parts_count = #parts
+
+        local parts_count = count_script_parts(ctx)
         if parts_count == 0 then return end
         
         local comp = ctx.composition
@@ -120,16 +147,18 @@ function ForceUpperAux.func(key_event, env)
     if key_event:release() then return 2 end
     local ctx = env.engine.context
     local raw_in = ctx.input or ""
-    if raw_in == "" or not raw_in:match("^[a-zA-Z0-9]") then
+    if raw_in == "" then
+        reset_cycle(env, true)
         return 2
     end
-    
-    local is_special_mode = wanxiang.s2t_conversion and wanxiang.s2t_conversion(ctx)
-    if wanxiang.is_function_mode_active(ctx) or is_special_mode then 
-        return 2 
-    end
+    if not raw_in:match("^[a-zA-Z0-9]") then return 2 end
 
     local current_key = key_event:repr()
+    if current_key ~= env.trigger_key and not env.is_cycling and env.press_count == 0 then
+        reset_cycle(env, false)
+        return 2
+    end
+    if is_special_mode(ctx) then return 2 end
     
     if current_key == env.trigger_key then
         if not ctx:is_composing() then return 2 end
