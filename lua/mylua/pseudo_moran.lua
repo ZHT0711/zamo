@@ -88,6 +88,8 @@ local top = {}
 local kAny = 0
 local kChar = 1
 local kWord = 2
+local short_code_cache_size = 512
+local no_short_codes = {}
 
 function top.init(env)
     -- Rime 組件
@@ -111,6 +113,11 @@ function top.init(env)
 
     -- 出簡讓全相關配置項
     env.ijrq_enable = env.engine.schema.config:get_bool("moran/ijrq/enable")
+    if env.ijrq_enable then
+        env.short_codes = {}
+        env.short_code_queue = {}
+        env.short_code_head = 1
+    end
     env.ijrq_defer = env.engine.schema.config:get_int("moran/ijrq/defer") or env.engine.schema.config:get_int("menu/page_size") or 5
     env.ijrq_hint = env.engine.schema.config:get_bool("moran/ijrq/show_hint")
     env.ijrq_suffix = env.engine.schema.config:get_string("moran/ijrq/suffix") or 'o'
@@ -142,128 +149,101 @@ function top.init(env)
 
     -- output 狀態
     env.output_i = 0
-    env.output_injected_secondary = {}
+    env.output_injected_secondary = nil
 end
 
 function top.fini(env)
     env.fixed = nil
     env.smart = nil
     env.rfixed = nil
+    env.short_codes = nil
+    env.short_code_queue = nil
     env.fixtranslator = nil
     env.output_injected_secondary = nil
     collectgarbage()
 end
 
+-- 固定碼表在本方案實例內不變。只保留可參與讓全的一至三碼，維持詞典中的先後順序。
+local function short_codes_for(env, text)
+    local codes = env.short_codes[text]
+    if codes then return codes end
+
+    codes = no_short_codes
+    for code in env.rfixed():lookup(text):gmatch("%S+") do
+        if #code < 4 then
+            if codes == no_short_codes then codes = {} end
+            codes[#codes + 1] = code
+        end
+    end
+    local queue = env.short_code_queue
+    if #queue == short_code_cache_size then
+        local head = env.short_code_head
+        env.short_codes[queue[head]] = nil
+        queue[head] = text
+        env.short_code_head = head % short_code_cache_size + 1
+    else
+        queue[#queue + 1] = text
+    end
+    env.short_codes[text] = codes
+    return codes
+end
+
+-- 通常在 Rime 取走首選後回收。若候選流提前丟棄，下一次查詢補做這一步。
+local function collect_pending(env)
+    if env.gc_pending then
+        env.gc_pending = false
+        collectgarbage("step", 0)
+    end
+end
+
 function top.func(input, seg, env)
+    collect_pending(env)
+    env.gc_pending = true
     top.output_begin(env)
 
-    -- 每次推進一小步回收，及時釋放原生對象，避免隨機完整 GC 的停頓。
-    collectgarbage("step", 0)
-
     local input_len = utf8.len(input)
-    local inflexible = env.engine.context:get_option("inflexible")
+    local context = env.engine.context
     local indicator = env.quick_code_indicator
     local suppress_smart = env.disable_sentence_candidates_upto >= input_len
 
-    -- 碼表最多會被用到三次（直接輸出、注入、兜底），且無補全、無整句，結果很少，
-    -- 故只查詢一次並緩存爲列表。只有輸出過的候選會被修改 comment，而三處用途互斥，
-    -- 復用同一批候選不影響結果。
-    local fixed_cands = moran.Thunk(function()
-        return moran.drain_translation(env.fixed, input, seg, nil)
-    end)
-
-    -- 用戶尚未選過字時，調用碼表。
-    local is_sentence_making = not (env.engine.context.input == input)
-    if not is_sentence_making or env.quick_code_in_sentence_making then
-        -- 如果輸入長度爲 4，只輸出 2 字詞。
-        if (input_len == 4) then
-            if inflexible and env.inject_fixed_words and env.inject_fixed_chars then
-                -- 如果固詞, inject_fixed_words 和 inject_fixed_chars 同時打開，則理解爲掛接用法，直接輸出碼表。
-                for _, cand in ipairs(fixed_cands()) do
-                    top.output_from_fixed(env, cand, is_sentence_making)
+    local is_sentence_making = context.input ~= input
+    local allow_fixed = not is_sentence_making or env.quick_code_in_sentence_making
+    local fixed_scanned = false
+    local fixed_cands
+    if input_len == 4 then
+        local direct = allow_fixed and context:get_option("inflexible")
+        local chars = env.inject_fixed_chars
+        local words = env.inject_fixed_words
+        if direct then
+            fixed_scanned = true
+            for cand in moran.query_translation(env.fixed, input, seg) do
+                local len = utf8.len(cand.text)
+                if (chars and words) or len == 2 or (chars and len == 1) or (words and len > 1) then
+                    top.output_from_fixed(env, cand, is_sentence_making, len)
                 end
-            elseif inflexible and env.inject_fixed_words then
-                -- 固詞 + 長詞 = 只有詞
-                for _, cand in ipairs(fixed_cands()) do
-                    if utf8.len(cand.text) > 1 then
-                        top.output_word_from_fixed(env, cand, is_sentence_making)
-                    end
-                end
-            elseif inflexible and env.inject_fixed_chars then
-                -- 固詞 + 單字 = 只有單字和二字詞
-                for _, cand in ipairs(fixed_cands()) do
-                    local cand_len = utf8.len(cand.text)
-                    if cand_len == 1 then
-                        top.output_char_from_fixed(env, cand)
-                    elseif cand_len == 2 then
-                        top.output_word_from_fixed(env, cand, is_sentence_making)
-                    end
-                end
-            elseif inflexible then
-                -- 如果只打開固詞模式，則 *只* 優先輸出 2 字詞
-                for _, cand in ipairs(fixed_cands()) do
-                    local cand_len = utf8.len(cand.text)
-                    if cand_len == 2 then
-                        top.output_word_from_fixed(env, cand, is_sentence_making)
-                    end
-                end
-            else
-                -- 否則，什麼都不輸出。
-            end
-        elseif input_len < 4 then          -- 造句模式下，只使用固定單字（詞語無法固定）
-            for _, cand in ipairs(fixed_cands()) do
-                if not is_sentence_making or utf8.len(cand.text) == 1 then
-                    top.output_from_fixed(env, cand, is_sentence_making)
-                end
-            end
-        elseif not is_sentence_making then  -- input_len > 4，輸出所有
-            for _, cand in ipairs(fixed_cands()) do
-                top.output_from_fixed(env, cand, is_sentence_making)
-            end
-        end
-    end
-
-    local fixed_triggered = env.output_i > 0
-
-    -- 注入到首選後的選項
-    -- 目前的用例：在動詞模式下處理 inject_fixed_chars 和 inject_fixed_words
-    -- 注意，爲了提高常規情況（inject_prioritize = kAny）的性能，
-    -- (1) 在此種情況下，下面的代碼會直接修改 env.output_injected_secondary
-    -- (2) inject_prioritize != kAny 時會先把結果寄存在 inject_chars 和 inject_words 中
-    --     在遍歷完成後才得到 env.output_injected_secondary
-    env.output_injected_secondary = {}
-    local inject_has_priority = env.inject_prioritize and (env.inject_prioritize ~= kAny)
-    local inject_chars = {}  -- valid only when inject_has_priority
-    local inject_words = {}  -- valid only when inject_has_priority
-    local num_injections = 0 -- valid only when inject_has_priority
-    if (not fixed_triggered and input_len == 4) then
-        for _, cand in ipairs(fixed_cands()) do
-            local cand_len = utf8.len(cand.text)
-            if (env.inject_fixed_chars and cand_len == 1) or (env.inject_fixed_words and cand_len > 2 and not is_sentence_making) then
-                if cand_len ~= 1 or (cand_len == 1 and not env.quick_code_indicator_skip_chars) then
-                    cand:get_genuine().comment = indicator
-                end
-                if not inject_has_priority then
-                    table.insert(env.output_injected_secondary, cand)
+                -- 只有整批都未直接輸出才需要注入或兜底。
+                if env.output_i == 0 then
+                    fixed_cands = fixed_cands or {}
+                    fixed_cands[#fixed_cands + 1] = cand
                 else
-                    num_injections = num_injections + 1
-                    if cand_len == 1 then
-                        inject_chars[num_injections] = cand
-                    else
-                        inject_words[num_injections] = cand
-                    end
+                    fixed_cands = nil
                 end
             end
+        elseif chars or (words and not is_sentence_making) then
+            fixed_cands = moran.drain_translation(env.fixed, input, seg)
         end
-    end
-    if inject_has_priority then
-        if env.inject_prioritize == kChar then
-            env.output_injected_secondary = top.append_lists(num_injections, inject_chars, inject_words)
-        elseif env.inject_prioritize == kWord then
-            env.output_injected_secondary = top.append_lists(num_injections, inject_words, inject_chars)
-        else
-            log.error("env.inject_prioritize has an invalid value: " .. tostring(env.inject_prioritize))
+        if fixed_cands and #fixed_cands > 0 and (chars or (words and not is_sentence_making)) then
+            top.prepare_injections(env, fixed_cands, is_sentence_making)
         end
+    elseif not is_sentence_making or (input_len < 4 and allow_fixed) then
+        -- 非四碼只走一遍碼表；造詞時，兜底也只會接受這裏已檢查過的單字。
+        for cand in moran.query_translation(env.fixed, input, seg) do
+            local len = utf8.len(cand.text)
+            if not is_sentence_making or len == 1 then
+                top.output_from_fixed(env, cand, is_sentence_making, len)
+            end
+        end
+        fixed_scanned = true
     end
 
     -- 詞輔在正常輸出之前，以提高其優先級
@@ -272,123 +252,109 @@ function top.func(input, seg, env)
         local user_ac = input:sub(input_len, input_len)
         local iter = top.raw_query_smart(env, real_input, seg, true)
         for cand in iter do
-            local len_match = (input_len == 7 and #cand.preedit == 8) or (input_len == 5 and #cand.preedit == 5)
-            local idx = len_match and cand.comment:find(user_ac)
-            local only_sp = (cand.preedit:sub(3,3) == ' ') and (#cand.preedit < 6 or cand.preedit:sub(6,6) == ' ')
-            if only_sp and idx then
+            local preedit = cand.preedit
+            local len_match = (input_len == 7 and #preedit == 8) or (input_len == 5 and #preedit == 5)
+            if len_match and cand.comment:find(user_ac) and preedit:byte(3) == 32
+                and (#preedit < 6 or preedit:byte(6) == 32) then
                 cand._end = cand._end + 1
                 cand.preedit = input
                 if env.word_filter_match_indicator then
                     cand.comment = env.word_filter_match_indicator
                 end
                 top.output(env, cand)
+                preedit = cand.preedit
             end
-            if #cand.preedit <= 2 then
-                break
-            end
+            if #preedit <= 2 then break end
         end
     end
 
     -- smart 在 fixed 之後輸出。
     -- 當需要詞輔時，保留 comment，以「提前」（用戶輸入詞輔前）提示輔助碼。
-    local smart_iter = nil
     if not suppress_smart then
-        smart_iter = moran.make_peekable(top.raw_query_smart(env, input, seg, env.enable_word_filter and env.enable_aux_hint))
-    end
-    if smart_iter ~= nil then
+        local smart_iter = top.raw_query_smart(env, input, seg, env.enable_word_filter and env.enable_aux_hint)
         local ijrq_enabled = env.ijrq_enable
             and (env.engine.context.input == input)
             and ((input_len == 4) or (input_len == 5 and input:sub(5,5) == env.ijrq_suffix))
 
-        local first_cand = smart_iter:peek()
-        if first_cand then
-            local sentence_cand = {}
-            if first_cand.type == "sentence" then
-                -- 输出万象整句
-                top.wanxiangOutput(input, seg, env)
-                -- 收集所有句子
-                while smart_iter:peek() and smart_iter:peek().type == "sentence" do
-                    table.insert(sentence_cand, smart_iter:next())
-                end
-                -- 处理后续的释放联想词，如果有
-                while smart_iter:peek() and smart_iter:peek().type == "completion" do
-                    top.output(env, smart_iter:next())
-                end
-                for _, c in ipairs(sentence_cand) do
-                    top.output(env, c)
-                end
+        local cand = smart_iter()
+        if cand and cand.type == "sentence" then
+            top.wanxiangOutput(input, seg, env)
+            local sentences = {}
+            repeat
+                sentences[#sentences + 1] = cand
+                cand = smart_iter()
+            until not cand or cand.type ~= "sentence"
+            while cand and cand.type == "completion" do
+                top.output(env, cand)
+                cand = smart_iter()
+            end
+            for _, sentence in ipairs(sentences) do
+                top.output(env, sentence)
             end
         end
 
-        if not ijrq_enabled then
-            -- 不啓用出簡讓全時
-            for cand in smart_iter do
-                if env.output_i >= env.max_candidates then break end
-                top.output(env, cand)
-            end
-        else
-            -- 啓用出簡讓全時
-            -- 讓全只發生在第一個多字詞出現之前，故只需緩衝到「讓全已結束，且已湊夠
-            -- ijrq_defer 個不讓全的候選」爲止；其後的候選順序不變，直接惰性輸出，
-            -- 不必遍歷整個候選流。
+        if ijrq_enabled then
+            -- 在第一個多字詞結束讓全。先輸出 defer 個不讓全的候選，
+            -- 再輸出讓全候選，最後補上等待期間暫存的其餘候選。
             local immediate_set = {}
             local deferred_set = {}
-            while ijrq_enabled or #immediate_set < env.ijrq_defer do
-                local cand = smart_iter()
-                if cand == nil then
-                    break
-                end
-                local cand_len = utf8.len(cand.text)
+            local head_count = 0
+            local input_prefix = input:sub(1,4)
+            while cand and (ijrq_enabled or head_count < env.ijrq_defer) do
+                local cand_len = ijrq_enabled and utf8.len(cand.text)
                 local defer = false
                 -- 如果輸出有詞，說明在拼詞，用戶很可能要使用高頻字，故此時停止出簡讓全。
                 if (ijrq_enabled and cand_len > 1) then
                     ijrq_enabled = false
                 end
                 if (ijrq_enabled and cand_len == 1) then
-                    local fixed_codes = env.rfixed():lookup(cand.text)
-                    for code in fixed_codes:gmatch("%S+") do
-                        if #code < 4
-                            and string.sub(input, 1, #code) == code
-                        then
+                    for _, code in ipairs(short_codes_for(env, cand.text)) do
+                        if input:sub(1, #code) == code then
                             defer = true
-                            if env.ijrq_hint and cand.preedit:sub(1,4) == input:sub(1,4) and not env.enable_quick_code_hint then
+                            if env.ijrq_hint and not env.enable_quick_code_hint and cand.preedit:sub(1,4) == input_prefix then
                                 cand.comment = code
                             end
                             break
                         end
                     end
                 end
-                if (not defer) then
-                    table.insert(immediate_set, cand)
-                else
+                if defer then
                     table.insert(deferred_set, cand)
+                elseif head_count < env.ijrq_defer then
+                    -- 前 defer 個不讓全的候選位置已確定，翻頁時再繼續查後面的字。
+                    head_count = head_count + 1
+                    top.output(env, cand)
+                else
+                    table.insert(immediate_set, cand)
                 end
-            end
-            for i = 1, math.min(env.ijrq_defer, #immediate_set) do
-                top.output(env, immediate_set[i])
+                cand = smart_iter()
             end
             for i = 1, #deferred_set do
                 top.output(env, deferred_set[i])
             end
-            for i = math.min(env.ijrq_defer, #immediate_set) + 1, #immediate_set do
+            for i = 1, #immediate_set do
                 top.output(env, immediate_set[i])
             end
-            for cand in smart_iter do
-                if env.output_i >= env.max_candidates then break end
-                top.output(env, cand)
-            end
+        end
+        while cand and env.output_i < env.max_candidates do
+            top.output(env, cand)
+            if env.output_i >= env.max_candidates then break end
+            cand = smart_iter()
         end
     end
 
     -- 最后：如果 smart 輸出爲空，並且 fixed 之前沒有調用過，此時再嘗試調用一下
-    if env.output_i == 0 then
-        for _, cand in ipairs(fixed_cands()) do
+    if env.output_i == 0 and (fixed_cands or not fixed_scanned) then
+        fixed_cands = fixed_cands or moran.drain_translation(env.fixed, input, seg)
+        for _, cand in ipairs(fixed_cands) do
             if not is_sentence_making or utf8.len(cand.text) == 1 then
                 cand.comment = indicator
                 yield(cand)
+                collect_pending(env)
             end
         end
     end
+    collect_pending(env)
 end
 
 
@@ -406,7 +372,7 @@ end
 -- | 每次 translation 開始前應該初始化 output 狀態
 function top.output_begin(env)
     env.output_i = 0
-    env.output_injected_secondary = {}
+    env.output_injected_secondary = nil
 end
 
 -- | 支持候選注入的 yield
@@ -415,11 +381,13 @@ function top.output(env, cand)
     yield(cand)
     env.output_i = env.output_i + 1
     if env.output_i == 1 then
-        -- drain injected cands
+        collect_pending(env)
         local cands = env.output_injected_secondary
-        env.output_injected_secondary = {}
-        for _, c in ipairs(cands) do
-            top.output(env, c)
+        if cands then
+            env.output_injected_secondary = nil
+            for _, c in ipairs(cands) do
+                top.output(env, c)
+            end
         end
     end
 end
@@ -431,52 +399,58 @@ function top.output_char_from_fixed(env, cand)
     top.output(env, cand)
 end
 
-function top.output_word_from_fixed(env, cand, is_sentence_making)
-    if not is_sentence_making or utf8.len(cand.text) == 2 then
+function top.output_word_from_fixed(env, cand, is_sentence_making, len)
+    if not is_sentence_making or (len or utf8.len(cand.text)) == 2 then
         cand.comment = env.quick_code_indicator
         top.output(env, cand)
     end
 end
 
-function top.output_from_fixed(env, cand, is_sentence_making)
-    if utf8.len(cand.text) == 1 then
+function top.output_from_fixed(env, cand, is_sentence_making, len)
+    len = len or utf8.len(cand.text)
+    if len == 1 then
         top.output_char_from_fixed(env, cand)
     else
-        top.output_word_from_fixed(env, cand, is_sentence_making)
+        top.output_word_from_fixed(env, cand, is_sentence_making, len)
     end
 end
 
--- | Query the smart translator for input, and transform the comment
--- | for candidates whose length is 2 or 3 characters long.
+local function transform_aux_comment(cand)
+    local cand_len = utf8.len(cand.text)
+    if cand_len == 2 or cand_len == 3 then
+        cand:get_genuine().comment = cand.comment:gsub("[a-z]+;([a-z])[a-z] ?", "%1")
+    end
+    return cand
+end
+
 function top.raw_query_smart(env, input, seg, with_comment)
-    -- 不需要詞輔提示時保留原 comment（原版魔然在此清空），無需逐個候選改寫。
-    if not with_comment then
-        return moran.query_translation(env.smart, input, seg, nil)
-    end
-    local transform = function(cand)
-        local cand_len = utf8.len(cand.text)
-        if cand_len == 2 or cand_len == 3 then
-            cand:get_genuine().comment = cand.comment:gsub("[a-z]+;([a-z])[a-z] ?", "%1")
-        end
-        return cand
-    end
+    local transform = with_comment and transform_aux_comment or nil
     return moran.query_translation(env.smart, input, seg, transform)
 end
 
--- Merge non-nil values in l1 and l2 into a new list.
-function top.append_lists(max, l1, l2)
-    local result = {}
-    for i = 1, max do
-        if l1[i] ~= nil then
-            table.insert(result, l1[i])
+function top.prepare_injections(env, fixed_cands, is_sentence_making)
+    local first, later = {}, nil
+    for _, cand in ipairs(fixed_cands) do
+        local len = utf8.len(cand.text)
+        local char = len == 1
+        if (char and env.inject_fixed_chars) or (len > 2 and env.inject_fixed_words and not is_sentence_making) then
+            if not char or not env.quick_code_indicator_skip_chars then
+                cand:get_genuine().comment = env.quick_code_indicator
+            end
+            if (char and env.inject_prioritize == kWord) or (not char and env.inject_prioritize == kChar) then
+                later = later or {}
+                later[#later + 1] = cand
+            else
+                first[#first + 1] = cand
+            end
         end
     end
-    for i = 1, max do
-        if l2[i] ~= nil then
-            table.insert(result, l2[i])
+    if later then
+        for _, cand in ipairs(later) do
+            first[#first + 1] = cand
         end
     end
-    return result
+    if #first > 0 then env.output_injected_secondary = first end
 end
 
 return top

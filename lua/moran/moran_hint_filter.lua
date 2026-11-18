@@ -83,6 +83,9 @@ function Module.init(env)
         local dict = env.engine.schema.config:get_string("fixed/dictionary")
         env.quick_code_hint_reverse = ReverseLookup(dict)
         env.quick_code_hint_skip_chars = env.engine.schema.config:get_bool("moran/quick_code_hint_skip_chars") or false
+        env.shortest_codes = {}
+        env.shortest_queue = {}
+        env.shortest_head = 1
     else
         env.quick_code_hint_reverse = nil
     end
@@ -108,6 +111,8 @@ function Module.fini(env)
     env.aux_table = nil
     env.enable_quick_code_hint = nil
     env.quick_code_hint_reverse = nil
+    env.shortest_codes = nil
+    env.shortest_queue = nil
     env.enable_tips_code_hint = nil
     tips_reverse_cache = {}
     tips_reverse_loaded = false
@@ -163,41 +168,48 @@ function Module.get_auxcode_hint(env, cand, gcand)
     end
 end
 
-function Module.get_quickcode_hint(env, cand, gcand)
-    if not env.enable_quick_code_hint or not env.quick_code_hint_reverse then
-        return nil
-    end
-    local text = gcand.text
+-- 只快取靜態碼表中最短的合資格編碼；同長時保留詞典順序。
+-- 是否顯示仍取決於當前候選的 preedit。
+local function shortest_quickcode(env, text)
+    local cached = env.shortest_codes[text]
+    if cached ~= nil then return cached end
+
     local len = utf8.len(text)
-    if len == 1 and env.quick_code_hint_skip_chars then
-        return nil
-    end
-    local all_codes = env.quick_code_hint_reverse:lookup(text)
-    if not all_codes then
-        return nil
-    end
-    
-    local in_use = false
-    local current_input = cand.preedit:gsub("%s", "") or ""
-    local current_len = #current_input
-    local shortest_code = nil
+    local shortest_code = false
     local shortest_length = 99
-    
-    for code in all_codes:gmatch("%S+") do
-        if #code < 4 or (env.inject_fixed_words and len >= 3) then
-            if code == current_input then
-                in_use = true
-            elseif #code < current_len then
-                if #code < shortest_length then
-                    shortest_length = #code
-                    shortest_code = code
+    if len ~= 1 or not env.quick_code_hint_skip_chars then
+        local codes = env.quick_code_hint_reverse:lookup(text)
+        if codes then
+            local allow_long = env.inject_fixed_words and len >= 3
+            for code in codes:gmatch("%S+") do
+                if #code < shortest_length and (#code < 4 or allow_long) then
+                    shortest_length, shortest_code = #code, code
                 end
             end
         end
     end
-    
-    if shortest_code then
-        return shortest_code
+    local queue = env.shortest_queue
+    if #queue < 1024 then
+        queue[#queue + 1] = text
+    else
+        local head = env.shortest_head
+        env.shortest_codes[queue[head]] = nil
+        queue[head] = text
+        env.shortest_head = head % 1024 + 1
+    end
+    env.shortest_codes[text] = shortest_code
+    return shortest_code
+end
+
+function Module.get_quickcode_hint(env, cand, gcand)
+    if not env.enable_quick_code_hint or not env.quick_code_hint_reverse then
+        return nil
+    end
+    local code = shortest_quickcode(env, gcand.text)
+    if code then
+        local preedit = cand.preedit
+        local _, spaces = preedit:gsub("%s", "")
+        if #code < #preedit - spaces then return code end
     end
     return nil
 end

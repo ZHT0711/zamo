@@ -303,11 +303,9 @@ end
 -- 整合自文件2的 apply_tone_preedit 函数
 -- ----------------------
 local function apply_tone_preedit(env, cand, skip_tone_preedit)
-    if not cand or not cand.preedit or cand.preedit == "" then
-        return
-    end
-
-    if skip_tone_preedit then return end
+    if skip_tone_preedit or not cand then return end
+    local original = cand.preedit
+    if not original or not original:find("[A-Z%d]") then return end
 
     -- 判断首选是否为纯英文（通过匹配是否全由英文字符组成且不含中文）
     if cand.text:match("^[%a%p%s]+$") then
@@ -317,13 +315,8 @@ local function apply_tone_preedit(env, cand, skip_tone_preedit)
     -- 2. 加载配置
     local aux_symbol = env.settings.aux_symbol
 
-    -- 如果没配置 symbol，直接跳过大写转换逻辑
-    if not aux_symbol or aux_symbol == "" then
-        goto tone_only
-    end
-
-    do
-        local preedit = cand.preedit
+    local preedit = original
+    if aux_symbol and aux_symbol ~= "" and preedit:find("[A-Z][A-Z]") then
         -- 3. 核心逻辑：排除前两位是大写的情况，只转换后续出现的双大写
         -- ([A-Z][A-Z]+) 匹配后续连续的两个及以上的大写字母
         local converted = preedit:gsub("^(..?-?)([A-Z][A-Z]+)", function(prefix, upper)
@@ -337,20 +330,18 @@ local function apply_tone_preedit(env, cand, skip_tone_preedit)
 
         -- 处理非行首（音节中间或靠后）的双大写
         -- 比如 "nihaoWS" -> "nihao·"
-        converted = converted:gsub("([^%s%^])([A-Z][A-Z]+)", function(prev, upper)
+        preedit = converted:gsub("([^%s%^])([A-Z][A-Z]+)", function(prev, upper)
             return prev .. aux_symbol
         end)
-
-        cand.preedit = converted
     end
-    ::tone_only::
     -- 4. 数字映射逻辑（上标转换）
-    local final_pre = cand.preedit:gsub("([^%d%s]+)(%d+)", function(body, digits)
-        local mapped = digits:gsub("%d", env.tone_map)
-        return body .. mapped
-    end)
-
-    cand.preedit = final_pre
+    if preedit:find("%d") then
+        preedit = preedit:gsub("([^%d%s]+)(%d+)", function(body, digits)
+            local mapped = digits:gsub("%d", env.tone_map)
+            return body .. mapped
+        end)
+    end
+    if preedit ~= original then cand.preedit = preedit end
 end
 
 -- ----------------------
@@ -597,23 +588,24 @@ function ZH.func(input, env)
 
         -- ⑥ 魔然提示
         -- 处理用户标记
-         if cand.type == "fixed" then                            -- 魔然简表
+         local cand_type = cand.type
+         if cand_type == "fixed" then                            -- 魔然简表
              final_comment = final_comment .. quick_code_indicator
-         elseif cand.type == "user_phrase" then                  -- 用户字典（自造词）
+         elseif cand_type == "user_phrase" then                  -- 用户字典（自造词）
              final_comment = final_comment  .. ""
-         elseif cand.type == "user_table" then                         -- table
+         elseif cand_type == "user_table" then                         -- table
              final_comment = final_comment .. ""
-         elseif cand.type == "pinned" then                       -- 魔然pin词
+         elseif cand_type == "pinned" then                       -- 魔然pin词
              final_comment = final_comment .. pin_indicator
-         elseif cand.type == "down" then                         -- 魔然ijrq
+         elseif cand_type == "down" then                         -- 魔然ijrq
              final_comment = final_comment .. ""
-         elseif cand.type == "aux" then                         -- 魔然词辅
+         elseif cand_type == "aux" then                         -- 魔然词辅
              final_comment = final_comment .. "󰚔"
-         elseif cand.type == "sentence" then                         -- 万象句子
+         elseif cand_type == "sentence" then                         -- 万象句子
              final_comment = final_comment .. "󱙻"
-         elseif cand.type == "pin_tip" then                       -- 魔然pin造词
+         elseif cand_type == "pin_tip" then                       -- 魔然pin造词
              final_comment = "開始加詞" .. pin_indicator
-         elseif cand.type == "model" then                        -- 模型
+         elseif cand_type == "model" then                        -- 模型
              final_comment = final_comment .. "󱚤"
         end
 

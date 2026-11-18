@@ -161,8 +161,12 @@ function Top.handle_matching(env, ctx, cand)
             Top.yield_exact(env, fcand)
             ctx.fixed_next = ctx.fixed_next + 1
         else
-            local si, scand = Top.find_matching_scand(ctx, fcand)
+            -- 上次停在同一個固定候選時，舊的 smart 候選已全部比對過。
+            -- 換到下一個固定候選後，仍須從後向前搜尋整個剩餘列表。
+            local first = ctx.waiting_for == ctx.fixed_next and #ctx.smart_list or 1
+            local si, scand = Top.find_matching_scand(ctx, fcand, first)
             if si == nil then
+                ctx.waiting_for = ctx.fixed_next
                 break
             end
             Top.yield_smart_in_place_of_fixed(env, scand, fcand)
@@ -181,8 +185,8 @@ end
 --------------------------------------------------------------------------------
 
 --- 在 smart_list 中查找匹配 fcand 的 scand，返回下標和 scand 對象。
-function Top.find_matching_scand(ctx, fcand)
-    for si = #ctx.smart_list, 1, -1 do
+function Top.find_matching_scand(ctx, fcand, first)
+    for si = #ctx.smart_list, first or 1, -1 do
         local scand = ctx.smart_list[si]
         if Top.candidate_match(scand, fcand) then
             return si, scand
