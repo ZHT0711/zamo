@@ -216,6 +216,23 @@ local function short_codes_for(env, text)
     return codes
 end
 
+-- 短碼的次選仍需要完整編碼，只有碼表首選才參與讓全。
+local function matching_first_short_code(env, input, seg, text, short_heads)
+    for _, code in ipairs(short_codes_for(env, text)) do
+        if input:sub(1, #code) == code then
+            local head = short_heads[code]
+            if head == nil then
+                local first = moran.query_translation(env.fixed, code, seg)()
+                head = first and first.text or false
+                short_heads[code] = head
+            end
+            if head == text then
+                return code
+            end
+        end
+    end
+end
+
 -- 通常在 Rime 取走首選後回收。若候選流提前丟棄，下一次查詢補做這一步。
 local function collect_pending(env)
     if env.gc_pending then
@@ -379,27 +396,20 @@ function top.func(input, seg, env)
             -- 再輸出讓全候選，最後補上等待期間暫存的其餘候選。
             local immediate_set = {}
             local deferred_set = {}
+            local short_heads = {}
             local head_count = 0
             local input_prefix = input:sub(1,4)
             while cand and (ijrq_enabled or head_count < env.ijrq_defer) do
                 local cand_len = ijrq_enabled and utf8.len(cand.text)
-                local defer = false
                 -- 如果輸出有詞，說明在拼詞，用戶很可能要使用高頻字，故此時停止出簡讓全。
-                if (ijrq_enabled and cand_len > 1) then
+                if ijrq_enabled and cand_len > 1 then
                     ijrq_enabled = false
                 end
-                if (ijrq_enabled and cand_len == 1) then
-                    for _, code in ipairs(short_codes_for(env, cand.text)) do
-                        if input:sub(1, #code) == code then
-                            defer = true
-                            if env.ijrq_hint and not env.enable_quick_code_hint and cand.preedit:sub(1,4) == input_prefix then
-                                cand.comment = code
-                            end
-                            break
-                        end
+                local short_code = cand_len == 1 and matching_first_short_code(env, input, seg, cand.text, short_heads)
+                if short_code then
+                    if env.ijrq_hint and not env.enable_quick_code_hint and cand.preedit:sub(1,4) == input_prefix then
+                        cand.comment = short_code
                     end
-                end
-                if defer then
                     table.insert(deferred_set, cand)
                 elseif head_count < env.ijrq_defer then
                     -- 前 defer 個不讓全的候選位置已確定，翻頁時再繼續查後面的字。
