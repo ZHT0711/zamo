@@ -13025,6 +13025,7 @@ sort: by_weight
 𩙯	héng;fb	1
 𪏓	héng;bb	1
 𫰟	héng;	1
+噷	hm;kq	1
 红	hóng;sg	24527
 洪	hóng;dg	2948
 宏	hóng;bs	2653
@@ -14258,9 +14259,9 @@ sort: by_weight
 挥	huī;fi	2895
 灰	huī;uh	2750
 辉	huī;gi	736
-恢	huī;xh	727
+悔	huǐ;xm	727
 徽	huī;rx	718
-悔	huǐ;xm	715
+恢	huī;xh	703
 慧	huì;fx	690
 绘	huì;sy	655
 毁	huǐ;ju	622
@@ -18529,6 +18530,7 @@ sort: by_weight
 懏	jùn;xk	38
 攈	jùn;fh	38
 銁	jūn;jo	38
+鋆	jūn;tj	35
 筠	jūn;vy	28
 陖	jùn;ew	23
 葰	jùn;cw	20
@@ -20539,6 +20541,7 @@ sort: by_weight
 累	lěi;tx	5143
 泪	lèi;do	5040
 累	lèi;tx	4939
+嘞	lei;kl	2141
 蕾	lěi;ct	1387
 垒	lěi;st	894
 磊	lěi;uu	569
@@ -20571,7 +20574,6 @@ sort: by_weight
 蕌	lěi;co	150
 勒	lēi;gl	148
 擂	léi;ft	142
-嘞	lei;kl	141
 鑸	lěi;jt	136
 纇	lèi;my	134
 櫑	léi;mt	134
@@ -26068,7 +26070,6 @@ sort: by_weight
 浽	něi;dn	1
 餧	něi;un	1
 㐻	nèi;rn	1
-㖏	nèi;kt	1
 㘨	nèi;tn	1
 㨅	nèi;fn	1
 㼏	něi;vg	1
@@ -26481,6 +26482,7 @@ sort: by_weight
 齧	niè;fr	113
 糱	niè;cm	97
 帇	niè;yj	92
+㖏	niè;kt	91
 躡	niè;ze	87
 囁	niè;ke	82
 顳	niè;ey	82
@@ -29950,12 +29952,12 @@ sort: by_weight
 擒	qín;fn	527
 芹	qín;cj	509
 禽	qín;rn	458
-嗪	qín;kh	445
+噙	qín;kn	445
 芩	qín;cv	426
 檎	qín;mn	408
 溱	qín;dh	408
 衾	qīn;ry	393
-噙	qín;kn	380
+嗪	qín;kh	380
 揿	qìn;fq	374
 骎	qīn;my	309
 吣	qìn;kx	302
@@ -38847,7 +38849,7 @@ sort: by_weight
 惜	xī;xo	873
 析	xī;mj	842
 细	xì;st	799
-嘻	xī;kk	771
+吸	xī;kj	771
 袭	xí;ly	753
 晰	xī;oj	713
 稀	xī;hj	707
@@ -38857,7 +38859,7 @@ sort: by_weight
 夕	xī;pd	680
 熙	xī;ih	661
 膝	xī;ou	655
-吸	xī;kj	647
+嘻	xī;kk	647
 牺	xī;nx	611
 媳	xí;nx	598
 隙	xì;eo	594
@@ -46266,13 +46268,13 @@ sort: by_weight
 元	yuán;aw	276319
 缘	yuán;su	5513
 员	yuán;kb	5402
+圆	yuán;kb	4388
 袁	yuán;ty	4286
 院	yuàn;ey	4071
 源	yuán;dx	3867
 远	yuǎn;zy	3673
 园	yuán;ky	3489
 愿	yuàn;ix	3314
-圆	yuán;kb	1188
 媛	yuán;ny	1120
 援	yuán;fy	747
 怨	yuàn;xx	742
@@ -48657,11 +48659,11 @@ sort: by_weight
 秩	zhì;hf	625
 稚	zhì;hv	593
 蜘	zhī;ik	555
-挚	zhì;fu	552
+掷	zhì;fe	552
 侄	zhí;rt	532
 帜	zhì;jv	518
+挚	zhì;fu	502
 趾	zhǐ;zv	502
-掷	zhì;fe	502
 窒	zhì;bt	475
 酯	zhǐ;yo	394
 痔	zhì;bc	381
