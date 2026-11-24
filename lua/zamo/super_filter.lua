@@ -5,11 +5,11 @@
 --         将候选词中的 \n, \t, \s(空格) 等文本转义符格式化为实际效果。
 -- 功能 B：成对符号包裹与候选锁定
 --         输入 `\` 瞬间锁定并展示当前候选快照，追加对应字母即可为候选词快速穿上各类括号/引号（如【】、“”）。
-local wanxiang = require("wanxiang/wanxiang")
+local zamo = require("zamo/zamo")
 local M = {}
 
 -- 全局通信通道
-_G.WanxiangSharedState = _G.WanxiangSharedState
+_G.ZamoSharedState = _G.ZamoSharedState
     or {
         sorter_active = false,
         last_input = "",
@@ -551,7 +551,7 @@ function M.func(input, env)
     -- 排序脚本的缓存是最终排序结果；只要输入精确匹配且缓存非空，就应当优先使用。
     -- 不能再按缓存数量比较，否则排序去重后数量稍少时，会错误回退到本地未排序快照。
     local target_cache = env.page_cache
-    local shared = _G.WanxiangSharedState
+    local shared = _G.ZamoSharedState
     if shared.sorter_active and shared.last_input == raw_code and shared.page_cache and #shared.page_cache > 0 then
         target_cache = shared.page_cache
     end

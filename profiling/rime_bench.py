@@ -130,7 +130,7 @@ def make_traits(user_dir, log_dir):
     t.log_dir = log_dir.encode()
     return t
 
-def bench(user_dir, out_json, schema_id="wanxiang_pro", rounds=4):
+def bench(user_dir, out_json, schema_id="zamo_pro", rounds=4):
     api = load_api()
     os.makedirs(os.path.dirname(out_json), exist_ok=True)
     log_dir = os.path.join(os.path.dirname(out_json), "logs")
@@ -284,7 +284,7 @@ def deploy(user_dir, out_json):
 if __name__ == "__main__":
     mode = sys.argv[1]
     if mode == "bench":
-        bench(sys.argv[2], sys.argv[3], *(sys.argv[4:5] or ["wanxiang_pro"]))
+        bench(sys.argv[2], sys.argv[3], *(sys.argv[4:5] or ["zamo_pro"]))
     elif mode == "deploy":
         deploy(sys.argv[2], sys.argv[3])
     else:

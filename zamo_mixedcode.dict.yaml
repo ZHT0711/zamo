@@ -6,7 +6,7 @@
 # ~/Library/Rime  (Mac OS)
 # %APPDATA%\Rime  (Windows)
 ---
-name: wanxiang_mixedcode
+name: zamo_mixedcode
 version: "lts"
 sort: by_weight
 import_tables:

@@ -6,7 +6,7 @@
 -- 
 -- 用法: 在 schema.yaml 中 engine/processors 列表添加 - lua_processor@*super_processor
 
-local wanxiang = require("wanxiang/wanxiang")
+local zamo = require("zamo/zamo")
 local M = {}
 
 local K_REJECT, K_ACCEPT, K_NOOP = 0, 1, 2
@@ -186,14 +186,14 @@ function M.init(env)
     env.kp_page_size = config:get_int("menu/page_size") or 6
     local m = config:get_string("kp_number_mode") or "auto"
     env.kp_mode = (m == "auto" or m == "compose") and m or "auto"
-    env.kp_func_patterns = wanxiang.load_regex_patterns(config, "recognizer/patterns")
+    env.kp_func_patterns = zamo.load_regex_patterns(config, "recognizer/patterns")
 
     -- [LetterSelector] 字母选词状态位
     env.ls_active = false 
 
     -- [ToneFallback] 声调容错
     env.tone_state = "idle"
-    env.lookup_key = config:get_string('wanxiang_lookup/key') or '`'
+    env.lookup_key = config:get_string('zamo_lookup/key') or '`'
 
     -- [QuickSymbol] 符号快打
     env.qs_trigger = "^([a-z])/$"
@@ -430,7 +430,7 @@ local function handle_backspace(key, env, ctx)
 
     local cur_len = ctx.input and #ctx.input or 0
     if env.bs_sequence then
-        if not wanxiang.is_mobile_device() then
+        if not zamo.is_mobile_device() then
             if env.bs_prev_len == 1 and cur_len == 0 then
                 return true 
             end
@@ -570,8 +570,8 @@ local function handle_number_logic(key, env, ctx)
         
         -- ToneFallback: 标记回退意图
         local is_func_mode = false
-        if wanxiang.is_function_mode_active then
-            is_func_mode = wanxiang.is_function_mode_active(ctx)
+        if zamo.is_function_mode_active then
+            is_func_mode = zamo.is_function_mode_active(ctx)
         end
         local is_first_cand_has_eng = false
         local cand = ctx:get_selected_candidate()

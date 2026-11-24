@@ -12,8 +12,8 @@
 --     - lua/data/my_tips.txt
 --     - lua/data/tips_show.txt
 
-local wanxiang = require("wanxiang/wanxiang")
-local userdb = require("wanxiang/userdb")
+local zamo = require("zamo/zamo")
+local userdb = require("zamo/userdb")
 
 local RECORD_SEPARATOR = " \t"
 local DEFAULT_RECORD_TAIL = "c=0 d=0 t=0"
@@ -67,7 +67,7 @@ local function generate_files_signature(paths)
     local parts = {}
 
     for _, path in ipairs(paths) do
-        local file, close = wanxiang.load_file_with_fallback(path, "rb")
+        local file, close = zamo.load_file_with_fallback(path, "rb")
 
         if file then
             local size, hash1, hash2 = 0, 5381, 0
@@ -104,7 +104,7 @@ end
 -- 从文件逐行加载提示；数据文件应自行保证 key 唯一。
 local function load_data_from_files(files)
     for _, file_path in ipairs(files) do
-        local file, close = wanxiang.load_file_with_fallback(file_path, "r")
+        local file, close = zamo.load_file_with_fallback(file_path, "r")
 
         if file then
             for raw_line in file:lines() do
@@ -369,23 +369,23 @@ function P.func(key, env)
     if not context:get_option("super_tips")
         or not env.tips_key
         or env.tips_key ~= key:repr()
-        or wanxiang.is_function_mode_active(context)
+        or zamo.is_function_mode_active(context)
         or not env.current_tip
         or env.current_tip == ""
     then
-        return wanxiang.RIME_PROCESS_RESULTS.kNoop
+        return zamo.RIME_PROCESS_RESULTS.kNoop
     end
 
     local text = env.current_tip:match("：%s*(.*)%s*")
         or env.current_tip:match(":%s*(.*)%s*")
 
     if not text or text == "" then
-        return wanxiang.RIME_PROCESS_RESULTS.kNoop
+        return zamo.RIME_PROCESS_RESULTS.kNoop
     end
 
     env.engine:commit_text(text)
     context:clear()
-    return wanxiang.RIME_PROCESS_RESULTS.kAccepted
+    return zamo.RIME_PROCESS_RESULTS.kAccepted
 end
 
 return P

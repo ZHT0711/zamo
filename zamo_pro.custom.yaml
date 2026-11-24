@@ -4,11 +4,11 @@ patch:
   # 英文查询与 moran 造词使用相同的语言标识；旧 en 词库已迁移。
   english/user_dict: zamo_english
 
-  # 当前为小鹤双拼 + 直接辅助。其他可选名称见 wanxiang_algebra.yaml。
+  # 小鹤双拼 + 直接辅助。
   speller/algebra:
     __patch:
-    - wanxiang_algebra:/pro/小鹤双拼
-    - wanxiang_algebra:/pro/直接辅助
+    - zamo_algebra:/pro/小鹤双拼
+    - zamo_algebra:/pro/直接辅助
 
   # 辅助码与反查
   force_upper_aux/hotkey: period # 句号固定候选

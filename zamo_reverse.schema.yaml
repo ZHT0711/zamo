@@ -1,12 +1,12 @@
 # Rime schema settings
 # encoding: utf-8
 schema:
-  schema_id: wanxiang_reverse
-  name: "万象：拆分与笔画反查"
+  schema_id: zamo_reverse
+  name: "雑䁿：拆分与笔画反查"
   version: "LTS"
   author: amzxyz
   description: |
-    万象的反查功能模块，方案融合了组字与笔画的能力
+    雑䁿的反查功能模块，支持部件组字与笔画反查。
 engine:
   processors:
     - key_binder
@@ -30,9 +30,9 @@ speller:
   alphabet: "abcdefghijklmnopqrstuvwxyz;"
   delimiter: " '"
   algebra:
-    __include: wanxiang_algebra:/reverse/小鹤双拼
-    __patch: wanxiang_algebra:/reverse/hspzn      #笔画类型有hspzn，hupvd及hslzy（适配乱序17）可选
+    __include: zamo_algebra:/reverse/小鹤双拼
+    __patch: zamo_algebra:/reverse/hspzn # 横竖撇折捺笔画编码
 
 translator:
-  dictionary: wanxiang_reverse
+  dictionary: zamo_reverse
   enable_user_dict: false

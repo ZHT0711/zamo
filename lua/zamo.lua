@@ -1,5 +1,5 @@
--- 兼容旧模块路径；公共工具统一维护在 lua/wanxiang/wanxiang.lua。
-local core = require("wanxiang/wanxiang")
+-- 兼容旧模块路径；公共工具统一维护在 lua/zamo/zamo.lua。
+local core = require("zamo/zamo")
 local legacy = setmetatable({ version = "v14.7.0" }, { __index = core })
 
 -- 保留旧接口对标点的判断，避免合并公共代码时改变现有行为。
@@ -14,7 +14,7 @@ function legacy.s2t_conversion(context)
         seg:has_tag("calculator") or
         seg:has_tag("shijian") or
         seg:has_tag("Ndate") or
-        seg:has_tag("wanxiang_reverse")
+        seg:has_tag("zamo_reverse")
 end
 
 return legacy

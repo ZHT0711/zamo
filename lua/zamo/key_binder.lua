@@ -2,8 +2,8 @@
 -- 本处理器在 Rime 标准库的按键绑定处理器（key_binder）的基础上增加了用正则表达式判断当前输入的编码的功能
 -- 也即，在输入编码不同时，可以将按键绑定到不同的功能
 
--- RIME_PROCESS_RESULTS 定义在 wanxiang.lua 中，这里需要引入才能使用
-local wanxiang = require("wanxiang/wanxiang")
+-- RIME_PROCESS_RESULTS 定义在 zamo.lua 中，这里需要引入才能使用
+local zamo = require("zamo/zamo")
 
 local this = {}
 
@@ -62,18 +62,18 @@ function this.func(key_event, env)
     local input = env.engine.context.input
     -- log.info("key_binder"..input)
     if env.redirecting then
-        return wanxiang.RIME_PROCESS_RESULTS.kNoop
+        return zamo.RIME_PROCESS_RESULTS.kNoop
     end
 
 
     if not input then
-        return wanxiang.RIME_PROCESS_RESULTS.kNoop
+        return zamo.RIME_PROCESS_RESULTS.kNoop
     end
     if env.engine.context == nil or env.engine.context.composition == nil or env.engine.context.composition:back() == nil then
-        return wanxiang.RIME_PROCESS_RESULTS.kNoop
+        return zamo.RIME_PROCESS_RESULTS.kNoop
     end
     if not env.engine.context.composition:back():has_tag("abc") then
-        return wanxiang.RIME_PROCESS_RESULTS.kNoop
+        return zamo.RIME_PROCESS_RESULTS.kNoop
     end
     for _, binding in ipairs(env.bindings) do
         -- 只有当按键和当前输入的模式都匹配的时候，才起作用
@@ -83,10 +83,10 @@ function this.func(key_event, env)
                 env.engine:process_key(event)
             end
             env.redirecting = false
-            return wanxiang.RIME_PROCESS_RESULTS.kAccepted
+            return zamo.RIME_PROCESS_RESULTS.kAccepted
         end
     end
-    return wanxiang.RIME_PROCESS_RESULTS.kNoop
+    return zamo.RIME_PROCESS_RESULTS.kNoop
 end
 
 return this

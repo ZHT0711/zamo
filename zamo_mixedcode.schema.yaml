@@ -1,8 +1,8 @@
 # Rime schema settings
 # encoding: utf-8
 schema:
-  schema_id: wanxiang_mixedcode
-  name: "万象：英文与混合编码"
+  schema_id: zamo_mixedcode
+  name: "雑䁿：英文与混合编码"
   version: "LTS"
   author: amzxyz
   description: |
@@ -30,8 +30,8 @@ speller:
   alphabet: "abcdefghijklmnopqrstuvwxyz;"
   delimiter: " '"
   algebra:
-    __include: wanxiang_algebra:/mixed/通用派生规则
-    __patch: wanxiang_algebra:/mixed/小鹤双拼   #可选的选项有（全拼, 自然码, 小鹤双拼, 微软双拼, 搜狗双拼, 智能ABC, 紫光双拼, 拼音加加, 自然龙, 汉心龙）
+    __include: zamo_algebra:/mixed/通用派生规则
+    __patch: zamo_algebra:/mixed/小鹤双拼
 translator:
-  dictionary: wanxiang_mixedcode
+  dictionary: zamo_mixedcode
   enable_user_dict: false

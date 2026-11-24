@@ -1,0 +1,12 @@
+# Rime schema settings
+# encoding: utf-8
+
+schema:
+  schema_id: zamo_chaifen
+  name: "雑䁿：拆分注释滤镜"
+  version: "1.0"
+
+engine:
+
+translator:
+  dictionary: zamo_chaifen

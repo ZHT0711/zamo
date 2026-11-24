@@ -22,6 +22,6 @@ patch:
   # 选单方案顺序；其余 schema 文件是这些方案的依赖。
   schema_list:
     - {schema: moran_fixed}
-    - {schema: wanxiang_pro}
-    - {schema: wanxiang_reverse}
+    - {schema: zamo_pro}
+    - {schema: zamo_reverse}
     - {schema: zamo_english}

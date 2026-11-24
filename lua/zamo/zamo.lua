@@ -1,17 +1,17 @@
 ---@diagnostic disable: undefined-global
 
 -- 万象的一些共用工具函数
-local wanxiang = {}
+local zamo = {}
 
 -- x-release-please-start-version
 
-wanxiang.version = "v15.0.1"
+zamo.version = "v15.0.1"
 
 -- x-release-please-end
 
 -- 全局内容
 ---@alias PROCESS_RESULT ProcessResult
-wanxiang.RIME_PROCESS_RESULTS = {
+zamo.RIME_PROCESS_RESULTS = {
     kRejected = 0, -- 表示处理器明确拒绝了这个按键，停止处理链但不返回 true
     kAccepted = 1, -- 表示处理器成功处理了这个按键，停止处理链并返回 true
     kNoop = 2,     -- 表示处理器没有处理这个按键，继续传递给下一个处理器
@@ -22,7 +22,7 @@ local is_mobile_device = nil
 -- 判断是否为手机设备
 ---@author amzxyz
 ---@return boolean
-function wanxiang.is_mobile_device()
+function zamo.is_mobile_device()
     local function _is_mobile_device()
         local dist = rime_api.get_distribution_code_name() or ""
         local user_data_dir = rime_api.get_user_data_dir() or ""
@@ -75,24 +75,24 @@ end
 --- 检测是否为万象专业版
 ---@param env Env
 ---@return boolean
-function wanxiang.is_pro_scheme(env)
+function zamo.is_pro_scheme(env)
     -- local schema_name = env.engine.schema.schema_name
     -- return schema_name:gsub("PRO$", "") ~= schema_name
-    return env.engine.schema.schema_id == "wanxiang_pro"
+    return env.engine.schema.schema_id == "zamo_pro"
 end
 
 -- 以 `tag` 方式检测是否处于反查模式
-function wanxiang.is_in_radical_mode(env)
+function zamo.is_in_radical_mode(env)
     local seg = env.engine.context.composition:back()
     return seg and (
-        seg:has_tag("wanxiang_reverse")
+        seg:has_tag("zamo_reverse")
     ) or false
 end
 
 ---判断是否在命令模式
 ---@param context Context | nil
 ---@return boolean
-function wanxiang.is_function_mode_active(context)
+function zamo.is_function_mode_active(context)
     if not context or not context.composition or context.composition:empty() then
         return false
     end
@@ -110,7 +110,7 @@ end
 
 ---@param context Context | nil
 ---@return boolean
-function wanxiang.s2t_conversion(context)
+function zamo.s2t_conversion(context)
     if not context or not context.composition or context.composition:empty() then
         return false
     end
@@ -124,10 +124,10 @@ function wanxiang.s2t_conversion(context)
         seg:has_tag("calculator") or -- super_calculator.lua V键计算器
         seg:has_tag("shijian") or    -- shijian.lua /rq /sr 等与时间日期相关功能
         seg:has_tag("Ndate") or      -- shijian.lua N日期功能
-        seg:has_tag("wanxiang_reverse")
+        seg:has_tag("zamo_reverse")
 end
 ---判断文件是否存在
-function wanxiang.file_exists(filename)
+function zamo.file_exists(filename)
     local f = io.open(filename, "r")
     if f ~= nil then
         io.close(f)
@@ -138,7 +138,7 @@ function wanxiang.file_exists(filename)
 end
 
 -- 判断字符是否为汉字
-function wanxiang.IsChineseCharacter(text)
+function zamo.IsChineseCharacter(text)
     local codepoint = utf8.codepoint(text)
     return
         (codepoint >= 0x4E00 and codepoint <= 0x9FFF)   -- Basic
@@ -172,7 +172,7 @@ local function is_absolute_path(path)
     return false
 end
 
-function wanxiang.get_filename_with_fallback(filename)
+function zamo.get_filename_with_fallback(filename)
     local _path = filename:gsub("^[\\/]+", "")
     local user_dir = rime_api.get_user_data_dir()
     
@@ -181,7 +181,7 @@ function wanxiang.get_filename_with_fallback(filename)
     end
 
     local user_path = user_dir .. "/" .. _path
-    if wanxiang.file_exists(user_path) then
+    if zamo.file_exists(user_path) then
         return user_path
     end
 
@@ -191,7 +191,7 @@ function wanxiang.get_filename_with_fallback(filename)
         return filename
     end
     local shared_path = shared_dir .. "/" .. _path
-    if wanxiang.file_exists(shared_path) then
+    if zamo.file_exists(shared_path) then
         return shared_path
     end
     return nil
@@ -200,10 +200,10 @@ end
 -- 按照优先顺序加载文件：用户目录 > 系统目录
 ---@param filename string 相对路径
 ---@retur file* | nil, function
-function wanxiang.load_file_with_fallback(filename, mode)
+function zamo.load_file_with_fallback(filename, mode)
     mode = mode or "r" -- 默认读取模式
 
-    local _filename = wanxiang.get_filename_with_fallback(filename)
+    local _filename = zamo.get_filename_with_fallback(filename)
 
     local file, err
     local function close()
@@ -225,7 +225,7 @@ local USER_ID_DEFAULT = "unknown"
 ---1. https://github.com/rime/weasel/pull/1649
 ---2. https://github.com/rime/librime/issues/1038
 ---@return string
-function wanxiang.get_user_id()
+function zamo.get_user_id()
     local user_id = rime_api.get_user_id()
     if user_id ~= USER_ID_DEFAULT then return user_id end
 
@@ -245,7 +245,7 @@ function wanxiang.get_user_id()
     installation_file:close()
     return user_id
 end
-wanxiang.INPUT_METHOD_MARKERS = {
+zamo.INPUT_METHOD_MARKERS = {
     ["Ⅰ"] = "pinyin", --全拼
     ["Ⅱ"] = "zrm", --自然码双拼
     ["Ⅲ"] = "flypy", --小鹤双拼
@@ -272,7 +272,7 @@ local __input_md_cache   = {}      -- 新增：是否命中“ⅲ”（若命中
 ---@param env Env
 ---@return string                -- id
 ---@return string|nil            -- md（仅在命中“ⅲ”时返回 "ⅲ"）
-function wanxiang.get_input_method_type(env)
+function zamo.get_input_method_type(env)
     local schema_id = env.engine.schema.schema_id or "unknown"
 
     -- 命中缓存则按是否有 md 决定返回 1 个或 2 个值
@@ -295,7 +295,7 @@ function wanxiang.get_input_method_type(env)
         local s = cfg:get_string(("speller/algebra/@%d"):format(i))
         if s then
             -- 不提前返回：需要把整段都扫描完，才能知道是否命中“ⅲ”
-            for symbol, id in pairs(wanxiang.INPUT_METHOD_MARKERS) do
+            for symbol, id in pairs(zamo.INPUT_METHOD_MARKERS) do
                 if s:find(symbol, 1, true) then
                     if symbol == "ⅲ" or id == "ⅲ" then
                         md = "ⅲ"                  -- 记录辅助标记
@@ -321,7 +321,7 @@ function wanxiang.get_input_method_type(env)
     end
 end
 
--- Wanxiang Regex > lua --不支持断言够用了
+-- Zamo Regex > lua --不支持断言够用了
 local RegexParser = {}
 
 function RegexParser.normalize(regex)
@@ -516,7 +516,7 @@ function RegexParser.convert(regex_str)
 end
 
 --- 调用加载函数
-function wanxiang.load_regex_patterns(config, path)
+function zamo.load_regex_patterns(config, path)
     local patterns = {}
     local map = config:get_map(path)
     if not map then return patterns end
@@ -554,4 +554,4 @@ function wanxiang.load_regex_patterns(config, path)
     end
     return patterns
 end
-return wanxiang
+return zamo

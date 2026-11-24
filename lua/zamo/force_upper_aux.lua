@@ -4,7 +4,7 @@
 -- 2026-10-17: 普通键快速返回、按需切分，并在输入结束时清理辅助历史。
 
 local ForceUpperAux = {}
-local wanxiang = require("wanxiang/wanxiang")
+local zamo = require("zamo/zamo")
 
 -- 获取 UTF-8 字符
 local function get_utf8_char(str, index)
@@ -70,8 +70,8 @@ local function reset_cycle(env, clear_history)
 end
 
 local function is_special_mode(ctx)
-    if wanxiang.s2t_conversion then return wanxiang.s2t_conversion(ctx) end
-    return wanxiang.is_function_mode_active(ctx)
+    if zamo.s2t_conversion then return zamo.s2t_conversion(ctx) end
+    return zamo.is_function_mode_active(ctx)
 end
 
 -- 查询辅助码
@@ -92,7 +92,7 @@ function ForceUpperAux.init(env)
     env.trigger_key = config:get_string("force_upper_aux/hotkey") or "Tab"
     env.aux_cache = {}
     
-    local dict_name = config:get_string("translator/dictionary") or "wanxiang_pro"
+    local dict_name = config:get_string("translator/dictionary") or "zamo_pro"
     env.dict = ReverseLookup(dict_name)
     
     env.history_first = {}   
