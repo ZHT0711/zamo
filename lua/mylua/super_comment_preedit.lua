@@ -1,7 +1,7 @@
 --@namzxyz https://github.com/amzxyz/rime_wanxiang
 -- 2026-10-17: 静态拆分词典采用有界正/负结果缓存。
 
-local wanxiang = require('wanxiang')
+local zamo = require('zamo')
 
 local tone_map = {
     ['ā']='a', ['á']='a', ['ǎ']='a', ['à']='a',
@@ -36,7 +36,7 @@ end
 -- ----------------------
 local CF = {}
 function CF.init(env)
-    if wanxiang.is_pro_scheme(env) then -- pro 版直接初始化
+    if zamo.is_pro_scheme(env) then -- pro 版直接初始化
         CF.get_dict(env)
     end
 end
@@ -50,7 +50,7 @@ end
 
 function CF.get_dict(env)
     if env.chaifen_dict == nil then
-        env.chaifen_dict = ReverseLookup("wanxiang_chaifen")
+        env.chaifen_dict = ReverseLookup("zamo_chaifen")
         env.chaifen_cache = {}
         env.chaifen_queue = {}
         env.chaifen_head = 1
@@ -93,10 +93,10 @@ function CR.init(env)
     env.corrections_cache = nil
     if not env.settings.corrector_enabled then return end
     local auto_delimiter = env.settings.auto_delimiter
-    local is_pro = wanxiang.is_pro_scheme(env)
+    local is_pro = zamo.is_pro_scheme(env)
     -- 根据方案选择加载路径
     local path = (is_pro and "dicts/cuoyin.pro.dict.yaml") or "dicts/cuoyin.dict.yaml"
-    local file, close_file, err = wanxiang.load_file_with_fallback(path)
+    local file, close_file, err = zamo.load_file_with_fallback(path)
     if not file then
         log.error(string.format("[super_comment]: 加载失败 %s，错误: %s", path, err))
         return
@@ -371,7 +371,7 @@ function ZH.init(env)
     settings.visual_delim = config:get_string("speller/visual_delimiter") or " "
     settings.tone_isolate = config:get_bool("speller/tone_isolate")
     settings.aux_symbol = config:get_string("force_upper_aux/symbol")
-    settings.is_wanxiang_pro = (env.engine.schema.schema_id == "wanxiang_pro")
+    settings.is_zamo_pro = (env.engine.schema.schema_id == "zamo_pro")
     settings.chaifen_left, settings.chaifen_right = settings.chaifen:match("^(.-)chaifen(.-)$")
     settings.corrector_left, settings.corrector_right = settings.corrector_type:match("^(.-)comment(.-)$")
     settings.fz_segment_pattern = "[^" .. auto_delimiter .. "]+"
@@ -400,9 +400,9 @@ function ZH.func(input, env)
     local pin_indicator = settings.pin_indicator
     local context = env.engine.context
     local input_str = context.input
-    local is_radical_mode = wanxiang.is_in_radical_mode(env)
-    local is_wanxiang_pro = settings.is_wanxiang_pro
-    local should_skip_candidate_comment = wanxiang.is_function_mode_active(context) or input_str == ""
+    local is_radical_mode = zamo.is_in_radical_mode(env)
+    local is_zamo_pro = settings.is_zamo_pro
+    local should_skip_candidate_comment = zamo.is_function_mode_active(context) or input_str == ""
     local is_tone_comment = env.engine.context:get_option("tone_hint")
     local is_comment_hint = env.engine.context:get_option("fuzhu_hint")
     local is_chaifen_enabled = env.engine.context:get_option("chaifen_switch")
@@ -494,7 +494,7 @@ function ZH.func(input, env)
                         local py = pinyin_segments[pinyin_index]
 
                         if py then
-                            if is_wanxiang_pro then
+                            if is_zamo_pro then
                                 input_parts[i] = py
                                 pinyin_index = pinyin_index + 1
                             elseif i == #input_parts and #part == 1 then

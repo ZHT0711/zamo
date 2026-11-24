@@ -1,8 +1,8 @@
 --@amzxyz https://github.com/amzxyz/rime_wanxiang
---wanxiang_lookup: #设置归属于super_lookup.lua
+--zamo_lookup: #设置归属于super_lookup.lua
   --tags: [ abc ]  # 检索当前tag的候选
   --key: "`"       # 输入中反查引导符
-  --lookup: [ wanxiang_reverse ] #反查滤镜数据库
+  --lookup: [ zamo_reverse ] #反查滤镜数据库
   --data_source: [ aux, db ] # 优先级：写在前面优先。即使只写db，只要开启enable_tone也能从注释获取声调。
   --enable_tone: true  #启用声调反查
 
@@ -63,7 +63,7 @@ end
 
 local function get_schema_rules(env)
     local config = env.engine.schema.config
-    local db_list = config:get_list("wanxiang_lookup/lookup")
+    local db_list = config:get_list("zamo_lookup/lookup")
     if not db_list or db_list.size == 0 then return {}, {} end
     local schema_id = db_list:get_value_at(0).value
     if not schema_id or #schema_id == 0 then return {}, {} end
@@ -349,11 +349,11 @@ function f.init(env)
     local config = env.engine.schema.config
     
     -- 1. 开启声调
-    env.enable_tone = config:get_bool('wanxiang_lookup/enable_tone')
+    env.enable_tone = config:get_bool('zamo_lookup/enable_tone')
     if env.enable_tone == nil then env.enable_tone = true end
 
     -- 2. 读取数据源
-    local sources_list = config:get_list('wanxiang_lookup/data_source')
+    local sources_list = config:get_list('zamo_lookup/data_source')
     env.data_sources = {}
     
     local config_has_aux_source = false
@@ -377,7 +377,7 @@ function f.init(env)
 
     env.db_table = nil
     if env.has_db then
-        local db_list = config:get_list("wanxiang_lookup/lookup")
+        local db_list = config:get_list("zamo_lookup/lookup")
         if db_list and db_list.size > 0 then
             env.db_table = {}
             for i = 0, db_list.size - 1 do
@@ -399,11 +399,11 @@ function f.init(env)
         env.comment_split_ptrn = "[^" .. alt_lua_punc(delimiter) .. "]+"
     end
 
-    env.search_key_str = config:get_string('wanxiang_lookup/key') or '`'
+    env.search_key_str = config:get_string('zamo_lookup/key') or '`'
     env.search_key_alt = alt_lua_punc(env.search_key_str)
     env.bypass_prefix = config:get_string('add_user_dict/prefix')
 
-    local tag = config:get_list('wanxiang_lookup/tags')
+    local tag = config:get_list('zamo_lookup/tags')
     if tag and tag.size > 0 then
         env.tag = {}
         for i = 0, tag.size - 1 do
@@ -593,7 +593,7 @@ function f.func(input, env)
             local res_str = db_obj:lookup(clean_fuma)
             if res_str and #res_str > 0 then
                 for word in res_str:gmatch("%S+") do
-                    local cand = Candidate("wanxiang_shadow", s_end, #ctx_input, word, "")
+                    local cand = Candidate("zamo_shadow", s_end, #ctx_input, word, "")
                     cand.quality = 1 
                     yield(cand)
                 end

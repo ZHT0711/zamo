@@ -1,6 +1,6 @@
 -- @amzxyz  https://github.com/amzxyz/rime-wanxiang
 -- Ctrl+1..9,0：上屏首选前 N 字；利用 spans 底层物理标尺精准切分 raw input
-local wanxiang = require("wanxiang/wanxiang")
+local zamo = require("zamo/zamo")
 
 local M = {}
 
@@ -71,29 +71,29 @@ function M.init(env)
     env._cpc_key_handler = function(key)
 
         if not key:ctrl() or key:release() then
-            return wanxiang.RIME_PROCESS_RESULTS.kNoop
+            return zamo.RIME_PROCESS_RESULTS.kNoop
         end
 
         local n = DIGIT[key.keycode] or KP[key.keycode]
-        if not n then return wanxiang.RIME_PROCESS_RESULTS.kNoop end
+        if not n then return zamo.RIME_PROCESS_RESULTS.kNoop end
 
         local c = env.engine.context
         if not c:is_composing() then
-            return wanxiang.RIME_PROCESS_RESULTS.kNoop
+            return zamo.RIME_PROCESS_RESULTS.kNoop
         end
 
         local cand = c:get_selected_candidate() or c:get_candidate(0)
         if not cand or not cand.text or #cand.text == 0 then
-            return wanxiang.RIME_PROCESS_RESULTS.kNoop
+            return zamo.RIME_PROCESS_RESULTS.kNoop
         end
 
         -- 直接调用底层 spans 获取物理切分坐标
         local spans = c.composition:spans()
         local count = type(spans.count) == "function" and spans:count() or spans.count
-        if not spans or count == 0 then return wanxiang.RIME_PROCESS_RESULTS.kNoop end
+        if not spans or count == 0 then return zamo.RIME_PROCESS_RESULTS.kNoop end
 
         local vertices = type(spans.vertices) == "function" and spans:vertices() or spans.vertices
-        if not vertices or #vertices < 2 then return wanxiang.RIME_PROCESS_RESULTS.kNoop end
+        if not vertices or #vertices < 2 then return zamo.RIME_PROCESS_RESULTS.kNoop end
 
         -- 已确认段一并提交；切分点只保留当前未确认段的绝对坐标
         local prefix, base = confirmed_prefix(c)
@@ -101,13 +101,13 @@ function M.init(env)
         for _, vertex in ipairs(vertices) do
             if vertex >= base then stops[#stops + 1] = vertex end
         end
-        if #stops < 2 then return wanxiang.RIME_PROCESS_RESULTS.kNoop end
+        if #stops < 2 then return zamo.RIME_PROCESS_RESULTS.kNoop end
 
         -- 防呆保护：取 期望长度(N)、当前段音节数、候选词字符数 三者中的最小值
         local available_syllables = #stops - 1
         local cand_len = utf8.len(cand.text) or 0
         n = math.min(n, available_syllables, cand_len)
-        if n <= 0 then return wanxiang.RIME_PROCESS_RESULTS.kNoop end
+        if n <= 0 then return zamo.RIME_PROCESS_RESULTS.kNoop end
         -- 获取需要上屏的中文候选字串
         local head = utf8_head(cand.text, n)
         -- 利用当前段 stops 拿到第 n 个音节的绝对字节偏移量
@@ -124,7 +124,7 @@ function M.init(env)
         set_pending(env, rest)
         c:refresh_non_confirmed_composition()
 
-        return wanxiang.RIME_PROCESS_RESULTS.kAccepted
+        return zamo.RIME_PROCESS_RESULTS.kAccepted
     end
 end
 
@@ -138,7 +138,7 @@ end
 
 function M.func(key, env)
     if not env._cpc_key_handler then
-        return wanxiang.RIME_PROCESS_RESULTS.kNoop
+        return zamo.RIME_PROCESS_RESULTS.kNoop
     end
     return env._cpc_key_handler(key)
 end

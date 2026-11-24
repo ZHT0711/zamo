@@ -8,9 +8,8 @@ config_version: 'LTS'
 
 # 方案列表
 schema_list:
-  - schema: wanxiang_pro
-  - schema: wanxiang_english
-#  - schema: wanxiang_t9
+  - schema: zamo_pro
+  - schema: zamo_english
 # 菜单
 menu:
   page_size: 6  # 候选词个数，不得超过6个，7890代表声调

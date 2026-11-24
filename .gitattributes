@@ -1,2 +1,9 @@
 # Auto detect text files and perform LF normalization
 * text=auto
+
+# LevelDB runtime files must retain their exact bytes.
+**/*.userdb/** binary
+
+# Compiled Rime assets and language models must never use text conversion.
+*.bin binary
+*.gram binary

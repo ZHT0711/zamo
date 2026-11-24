@@ -1,7 +1,7 @@
 -- 作者: XiHanQWQ（超级大🐑）
 -- https://github.com/XiHanQWQ
 -- commit_reverse_comment.lua
--- 功能：使用配置的按键上屏当前选中候选词的注释（仅在segment:has_tag("wanxiang_reverse")也就是部件笔画反查时触发）
+-- 功能：使用配置的按键上屏当前选中候选词的注释（仅在segment:has_tag("zamo_reverse")也就是部件笔画反查时触发）
 
 local function init(env)
     -- 从配置获取触发按键，默认为Tab
@@ -29,14 +29,14 @@ local function processor(key_event, env)
         return 2
     end
     
-    -- 获取当前选中的segment并检查是否有wanxiang_reverse标签
+    -- 获取当前选中的segment并检查是否有zamo_reverse标签
     local composition = context.composition
     if not composition then
         return 2
     end
     
     local segment = composition:back()
-    if not segment or not segment:has_tag("wanxiang_reverse") then
+    if not segment or not segment:has_tag("zamo_reverse") then
         return 2
     end
     

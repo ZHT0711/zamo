@@ -22,7 +22,7 @@
 local AuxFilter = {}
 local bit = require("lib/bit")
 local userdb = require("lib/userdb")
-local wanxiang = require("wanxiang")
+local zamo = require("zamo")
 
 -- 配置项默认值
 local DEFAULT_CONFIG = {
@@ -34,7 +34,7 @@ local DEFAULT_CONFIG = {
 
 -- 获取文件内容哈希值，使用 FNV-1a 哈希算法
 local function calculate_file_hash(filepath)
-    local file, close_file, actual_path = wanxiang.load_file_with_fallback(filepath, "rb")
+    local file, close_file, actual_path = zamo.load_file_with_fallback(filepath, "rb")
     if not file then return nil end
 
     -- FNV-1a 哈希参数（32位）
@@ -104,7 +104,7 @@ end
 local function load_memory_dict(env, filename)
     env.memory_aux_code = {}
     
-    local file, close_file = wanxiang.load_file_with_fallback(filename, "r")
+    local file, close_file = zamo.load_file_with_fallback(filename, "r")
     if not file then
         return {}
     end
@@ -128,7 +128,7 @@ end
 -- 从文件初始化数据库
 local function init_db_from_file(env, filename)
     local aux_db = env.aux_db
-    local file, close_file = wanxiang.load_file_with_fallback(filename, "r")
+    local file, close_file = zamo.load_file_with_fallback(filename, "r")
     if not file then
         return
     end
@@ -188,8 +188,8 @@ function AuxFilter.init(env)
     local filename = "lua/aux_code/ZRM_Aux-code.txt"
     if env.name_space and env.name_space ~= "" then
         local custom_filename = "lua/aux_code/" .. env.name_space .. ".txt"
-        local custom_file_path = wanxiang.get_filename_with_fallback(custom_filename)
-        if custom_file_path and wanxiang.file_exists(custom_file_path) then
+        local custom_file_path = zamo.get_filename_with_fallback(custom_filename)
+        if custom_file_path and zamo.file_exists(custom_file_path) then
             filename = custom_filename
         end
     end
