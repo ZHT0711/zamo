@@ -1,74 +1,44 @@
-# 我的 Rime 配置
+# 雑䁿
 
-当前保留「魔然固定」「万象专业版」「万象反查」「英文」四个选单方案，以及它们所需的依赖。主方案沿用 **小鹤双拼 + 直接辅助**，PIN 代码和现有词库保留。
+雑䁿是一套以 **小鹤双拼 + 直接辅助** 为主的个人 Rime 配置。平时可以只打双拼，遇到重码时直接在音节后加辅助码。整句输入使用万象词库和语法模型，字词候选结合魔然的固定字词表、PIN 置顶和候选重排。
 
-## 以后主要改这些文件
+## 在小狼毫中上手
+
+1. 安装小狼毫。右键小狼毫托盘图标，打开「用户文件夹」，备份现有配置。[小狼毫下载](https://github.com/rime/weasel/releases)
+2. 下载或克隆本仓库，把根目录的方案、字典、配置 YAML 文件和 `custom_phrase.txt`，以及 `dicts/`、`lua/`、`opencc/` 按原有层级复制到用户文件夹。保留本机的 `user.yaml`、`installation.yaml` 和 `*.userdb/`。已有同名 `.custom.yaml` 且希望保留原设置时，把所需设置合并到同一个 `patch` 中。
+3. 单独下载 `wanxiang-lts-zh-hans.gram`，放到用户文件夹根目录，与 `wanxiang_pro.schema.yaml` 同级。[万象语法模型下载](https://github.com/amzxyz/rime-wanxiang-data/releases/tag/LTS)
+4. 右键小狼毫托盘图标，选择「重新部署」。在输入框中按 `Ctrl` + 反引号打开方案选单，选择 **万象拼音PRO**。
+
+## 常用输入
+
+| 想做什么 | 怎么输入 |
+| --- | --- |
+| 直接加辅助码 | 在双拼音节后加一位或两位辅助码。例如「好」的双拼是 `hc`，加上辅助码可输入 `hcnz`。 |
+| 临时用辅助码筛选 | 输入双拼后按 `@` 显示辅助码提示，再输入一位或两位辅助码筛选候选。 |
+| 固定当前首选 | 在中文组字过程中，已有首选候选时按句号 `.`，为首选对应的音节补上大写辅助码。紧接着按退格可恢复原输入。 |
+| 拆分或笔画反查 | 从空输入开始，先按反引号，再输入部件或笔画编码。 |
+| 按声调筛选 | 在双拼音节后加 `7`、`8`、`9`、`0`，分别对应一至四声。例如 `hc9` 对应三声的「好」。 |
+
+## 自定义
 
 | 想改什么 | 修改入口 |
 | --- | --- |
 | 候选数量、方案顺序、中英文切换键 | [default.custom.yaml](default.custom.yaml) |
-| 主方案双拼、辅助码、三选键、注释提示 | [wanxiang_pro.custom.yaml](wanxiang_pro.custom.yaml) |
-| 小狼毫字体、大小等外观 | [weasel.custom.yaml](weasel.custom.yaml) |
-| 魔然固定方案的个人补丁 | [moran_fixed.custom.yaml](moran_fixed.custom.yaml) |
+| 主方案的双拼、辅助码、三选键、注释提示 | [wanxiang_pro.custom.yaml](wanxiang_pro.custom.yaml) |
+| 小狼毫候选窗的字体、字号和布局 | [weasel.custom.yaml](weasel.custom.yaml) |
+| 「魔然·字詞」的个人设置 | [moran_fixed.custom.yaml](moran_fixed.custom.yaml) |
 | 固定短语 | [custom_phrase.txt](custom_phrase.txt) |
 | 自定义超级提示 | [lua/data/tips_user.txt](lua/data/tips_user.txt) |
 | 符号映射 | [wanxiang_symbols.yaml](wanxiang_symbols.yaml) |
-| 主方案加载哪些词库 | [wanxiang_pro.dict.yaml](wanxiang_pro.dict.yaml) 的 `import_tables`，对应 [dicts/](dicts/) |
-| 双拼和辅助码规则的具体定义 | [wanxiang_algebra.yaml](wanxiang_algebra.yaml) |
+| 主方案加载的词库 | [wanxiang_pro.dict.yaml](wanxiang_pro.dict.yaml) 的 `import_tables`，词库文件在 [dicts/](dicts/) |
+| 双拼和辅助码规则 | [wanxiang_algebra.yaml](wanxiang_algebra.yaml) |
 
-优先改 `.custom.yaml` 中 `patch:` 下的项目。例如主方案的 `force_upper_aux/hotkey: period` 表示句号固定候选。新增补丁时写在已有 `patch:` 内，不要再加第二个 `patch:`。保留 YAML 的空格缩进，不使用 Tab。当前候选数量不要超过 6，数字 7890 用于声调。
+新增设置时写进对应 `.custom.yaml` 已有的 `patch`，用空格缩进。保留 `7`、`8`、`9`、`0` 作为声调键时，候选数量最多设为 6。保存后重新部署。[Rime 定制指南](https://github.com/rime/home/wiki/CustomizationGuide)
 
-保存后右键小狼毫托盘图标，选择「重新部署」。也可以在本目录打开 PowerShell，运行：
+主方案还会加载拆分注释、英文混输和字集过滤等依赖。复制配置时请保留完整的方案与词库文件。`build/` 由部署生成，`*.userdb/` 保存本机用户数据。
 
-```powershell
-.\tools\deploy.ps1
-```
+## 参考与致谢
 
-Lua 改动也需要重新部署。短语、提示数据分别沿用现有文件中的行格式；修改提示数据后重新部署即可刷新。
-
-## 目录怎么分
-
-```text
-*.custom.yaml          常用个人设置
-*.schema.yaml          方案本体及依赖，进阶修改时再看
-*.dict.yaml            字典入口
-dicts/                 实际使用的分包词库
-lua/mylua/             个人功能：辅助码、V 计算器、分段上屏、反查与注释等
-lua/wanxiang/          万象公共工具、按键处理、提示、过滤器
-lua/moran/             魔然功能、重排、PIN 等
-lua/lib/               必要的位运算与旧路径兼容入口
-lua/data/              超级提示的默认数据和个人数据
-lua/aux_code/          辅助码原始数据
-opencc/                方案实际引用的转换与映射数据
-tools/                 重新部署入口
-build/                 自动生成的编译结果
-*.userdb/              使用中的用户词库、PIN、提示缓存等数据库
-```
-
-公共函数统一维护在 `lua/wanxiang/wanxiang.lua`，数据库包装统一维护在 `lua/wanxiang/userdb.lua`。`lua/wanxiang.lua` 和 `lua/lib/userdb.lua` 是兼容旧 `require` 路径的小入口，保留它们即可。PIN 实现在 `lua/moran/moran_pin.lua`，本次没有修改。
-
-根目录保留了 Rime 需要直接定位的方案、字典和公共配置。七个 schema 中，`wanxiang_mixedcode`、`wanxiang_chaifen`、`moran_charset` 是依赖方案，不能因它们不在选单中而删除。
-
-`build/`、`*.userdb/`、`user.yaml`、`installation.yaml` 是编译结果或本机状态，不作为日常修改入口。尤其不要手动编辑数据库。`wanxiang-lts-zh-hans.gram` 是实际启用的语言模型，需要保留。
-
-`.ignore` 让常用代码搜索跳过运行数据；`.gitignore` 阻止以后新产生的数据进入版本管理。它不会移除 Git 中已经跟踪的文件，本次也没有改动 Git 索引。
-
-## 本次精简及恢复
-
-整理时间：2026-10-17。移出未引用的 Lua、旧日文模块、重复字典、旧模板、停用数据库与英文方案的旧编译结果，共 1926 个文件、约 108 MiB；四个选单方案及现用数据库保留。
-
-完整备份（包括原 Git 目录和用户词库）：
-
-```text
-E:\Rime-backups\directory-cleanup-20261017-204632\full
-```
-
-移出的文件按原相对路径归档在：
-
-```text
-E:\Rime-backups\directory-cleanup-20261017-204632\archive
-```
-
-该备份目录中的 `cleanup-plan.json` 记录移出路径及文件校验值。需要恢复某项功能时，从 `archive` 按原路径复制回本目录，再检查方案里的引用并重新部署。恢复数据库或整目录前先退出小狼毫，避免文件占用；日常修改只需按上表找到对应文件。
-
-Rime 的补丁机制可参考[官方定制指南](https://github.com/rime/home/wiki/CustomizationGuide)。
+- 魔然提供固定字词、PIN 和候选重排机制。[rime-moran](https://github.com/rimeinn/rime-moran)
+- 雜然提供固定字词与整句候选并用的实现参考。[zaran](https://github.com/LightGuOne/zaran)
+- 万象提供主方案所用的词库与语法模型。[万象拼音](https://github.com/amzxyz/rime-wanxiang) · [万象词库与模型](https://github.com/amzxyz/rime-wanxiang-data)
