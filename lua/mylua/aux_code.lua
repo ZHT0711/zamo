@@ -20,7 +20,6 @@
 --     phrase_only: true        # 辅助码触发后是否只输出词语，过滤掉单字候选（默认false，不影响主输入模式）
 
 local AuxFilter = {}
-local bit = require("lib/bit")
 local userdb = require("lib/userdb")
 local zamo = require("zamo")
 
@@ -32,25 +31,40 @@ local DEFAULT_CONFIG = {
     phrase_only = false       -- 辅助码触发后是否只输出词语，过滤单字候选
 }
 
--- 获取文件内容哈希值，使用 FNV-1a 哈希算法
+-- Lua 5.3 及以上可直接使用整数位运算。旧运行时沿用原来的哈希算法。
+local native_hash_chunk = (loadstring or load)([[
+    return function(hash, chunk)
+        for i = 1, #chunk do
+            hash = ((hash ~ chunk:byte(i)) * 0x01000193) & 0xFFFFFFFF
+        end
+        return hash
+    end
+]])
+local hash_chunk
+if native_hash_chunk then
+    hash_chunk = native_hash_chunk()
+else
+    local bit = require("lib/bit")
+    function hash_chunk(hash, chunk)
+        for i = 1, #chunk do
+            hash = bit.bxor(hash, chunk:byte(i))
+            hash = (hash * 0x01000193) % 0x100000000
+            hash = bit.band(hash, 0xFFFFFFFF)
+        end
+        return hash
+    end
+end
+
+-- FNV-1a 文件哈希用于检测辅码文件是否发生变化。
 local function calculate_file_hash(filepath)
     local file, close_file, actual_path = zamo.load_file_with_fallback(filepath, "rb")
     if not file then return nil end
 
-    -- FNV-1a 哈希参数（32位）
-    local FNV_OFFSET_BASIS = 0x811C9DC5
-    local FNV_PRIME = 0x01000193
-
-    local hash = FNV_OFFSET_BASIS
+    local hash = 0x811C9DC5
     while true do
         local chunk = file:read(4096)
         if not chunk then break end
-        for i = 1, #chunk do
-            local byte = string.byte(chunk, i)
-            hash = bit.bxor(hash, byte)
-            hash = (hash * FNV_PRIME) % 0x100000000
-            hash = bit.band(hash, 0xFFFFFFFF)
-        end
+        hash = hash_chunk(hash, chunk)
     end
 
     close_file()
@@ -412,7 +426,6 @@ end
 function AuxFilter.func(input, env)
     local context = env.engine.context
     local inputCode = context.input
-    local char_priority = context:get_option('char_priority') or false
     local has_trigger = inputCode:find(env.trigger_key, 1, true) ~= nil
 
     -- 主输入无需注释时，连辅助码解析和排序数组也不创建。
@@ -421,6 +434,7 @@ function AuxFilter.func(input, env)
         return
     end
 
+    local char_priority = context:get_option('char_priority') or false
     local trigger_pattern = env.trigger_key_string
     local localSplit = inputCode:match(trigger_pattern .. "([^,]+)")
     local auxStr = nil

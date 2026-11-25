@@ -438,22 +438,18 @@ end
 
 function f.func(input, env)
     local context = env.engine.context
-    local seg = context.composition:back()
+    local ctx_input = context.input
+    local _, fuma, _, s_end = split_lookup_input(ctx_input, env.search_key_str, env.bypass_prefix)
+    if not fuma or fuma == "" or #env.data_sources == 0 then
+        for cand in input:iter() do yield(cand) end
+        return
+    end
 
+    local seg = context.composition:back()
     if not seg or not f.tags_match(seg, env) then
         for cand in input:iter() do yield(cand) end
         return
     end
-    if #env.data_sources == 0 then
-        for cand in input:iter() do yield(cand) end
-        return
-    end
-
-    local ctx_input = env.engine.context.input
-    -- 传入 env.bypass_prefix
-    local _, fuma, s_start, s_end = split_lookup_input(ctx_input, env.search_key_str, env.bypass_prefix)
-    if not s_start then for cand in input:iter() do yield(cand) end return end
-    if #fuma == 0 then for cand in input:iter() do yield(cand) end return end
 
     local tone_filter_seq = {}
     local clean_fuma = ""
@@ -467,7 +463,7 @@ function f.func(input, env)
     end
     local apply_tone_filter = env.enable_tone and (#tone_filter_seq > 0)
 
-    local if_single_char_first = env.engine.context:get_option('char_priority')
+    local if_single_char_first = context:get_option('char_priority')
     local buckets = {}
     for i = 1, #env.data_sources do buckets[i] = {} end
     local long_word_cands = {}
