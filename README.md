@@ -50,7 +50,7 @@
 | 「魔然·字詞」的个人设置 | [moran_fixed.custom.yaml](moran_fixed.custom.yaml) |
 | 固定短语 | [custom_phrase.txt](custom_phrase.txt) |
 | 自定义超级提示 | [lua/data/tips_user.txt](lua/data/tips_user.txt) |
-| 符号映射 | [zamo_symbols.yaml](zamo_symbols.yaml) |
+| 标点、斜杠符号、成对符号和快符 | [zamo_symbols.yaml](zamo_symbols.yaml) |
 | 主方案加载的词库 | [zamo_pro.dict.yaml](zamo_pro.dict.yaml) 的 `import_tables`，词库文件在 [dicts/](dicts/) |
 | 双拼和辅助码规则 | [zamo_algebra.yaml](zamo_algebra.yaml) |
 

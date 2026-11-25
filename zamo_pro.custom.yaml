@@ -1,23 +1,20 @@
-# 主方案个人设置：修改后重新部署。完整修改入口见 README.md。
-# 这里的值与整理前一致；优先在此添加补丁，避免到大文件中查找。
+# 雑䁿个人设置。保存后重新部署。
 patch:
-  # 英文查询与 moran 造词使用相同的语言标识；旧 en 词库已迁移。
-  english/user_dict: zamo_english
-
-  # 小鹤双拼 + 直接辅助。
+  # 双拼与辅助码
   speller/algebra:
     __patch:
-    - zamo_algebra:/pro/小鹤双拼
-    - zamo_algebra:/pro/直接辅助
-
-  # 辅助码与反查
-  force_upper_aux/hotkey: period # 句号固定候选
-  aux_code/trigger_word: "@" # 临时辅助码
+      - zamo_algebra:/pro/小鹤双拼
+      - zamo_algebra:/pro/直接辅助
+  force_upper_aux/hotkey: period # 句号固定首选
+  aux_code/trigger_word: "@" # 临时辅助码触发键
   aux_code/storage: db
-  aux_code/show_aux_notice: trigger # always / trigger / none
-  super_comment/candidate_length: 2 # 辅助码提示长度，0 关闭
+  aux_code/show_aux_notice: trigger # always 始终显示，trigger 触发后显示，none 隐藏
+  super_comment/candidate_length: 2 # 辅助码提示的候选长度上限，0 关闭
 
-  # 三选按键：编码为 2~3 位小写字母（或单独 V）且非 rq 开头时，单独按此键选择第三候选
+  # 左 Shift 三选。适用于 2 至 3 位小写字母编码或单独 V，排除 rq 开头。
   moran/third_candidate_key: Shift+Shift_L
-  # 略码造词（Shift+B/L/Y/V/Q => X不X、X了X、X一X、X着X、X来X去），需要时取消注释启用
+  # 启用略码造词后，Shift+B/L/Y/V/Q 分别输入 X不X、X了X、X一X、X着X、X来X去。
   # moran/shorthands: true
+
+  # 英文查询与造词共用的用户词典。旧 en 词库已迁移。
+  english/user_dict: zamo_english
