@@ -145,24 +145,18 @@ function Module.get_auxcode_hint(env, cand, gcand)
         end
         return codes:sub(2)
     elseif len ~= 1 and env.is_auxfilter and (gcand.type == "phrase" or gcand.type == "user_phrase") then
-        local result = ""
-        for i, cp in moran.codepoints(gcand.text) do
-            local cpaux = env.aux_table[cp]
-            if cpaux and #cpaux > 0 then
-                cpaux = cpaux:match("^[a-z]+")
-                if result == "" then
-                    result = cpaux
-                else
-                    result = result .. ' ' .. cpaux
-                end
-            else
+        local codes = {}
+        for _, cp in moran.codepoints(text) do
+            local aux = env.aux_table[cp]
+            local code = aux and aux:match("[a-z]+")
+            if not code then
                 return nil
             end
+            codes[#codes + 1] = code
         end
-        if #result == 0 then
-            return nil
+        if #codes > 0 then
+            return table.concat(codes, " ")
         end
-        return result
     else
         return nil
     end

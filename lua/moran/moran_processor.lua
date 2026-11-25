@@ -138,7 +138,9 @@ local function steal_auxcode_processor(key_event, env)
       return kConsumingNoop
    end
 
-   local preedit = stealee:get_selected_candidate().preedit
+   local cand = stealee:get_selected_candidate()
+   if not cand then return kConsumingNoop end
+   local preedit = cand.preedit
    local plen = #preedit
    local auxcode
 
@@ -417,6 +419,7 @@ local function shorthand_processor(key_event, env)
    if composition:empty() then return kNoop end
    local segment = composition:back()
    local cand = segment:get_selected_candidate()
+   if not cand then return kNoop end
    env.engine:commit_text(shf(env, cand.text))
    env.engine.context:clear()
    return kAccepted
